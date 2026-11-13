@@ -50,8 +50,8 @@ const REGION_SVG_PATHS: Readonly<
     stroke: '#d946ef',
   },
   south: {
-    path: 'M 250 328 L 315 305 L 355 305 L 425 322 L 485 310 L 465 365 L 385 388 L 285 372 Z',
-    labelPos: { x: 378, y: 348 },
+    path: 'M 250 328 L 315 305 L 355 305 L 425 322 L 485 310 L 472 378 L 385 398 L 278 382 Z',
+    labelPos: { x: 375, y: 338 },
     fillActive: 'url(#grad-south-active)',
     fillIdle: 'url(#grad-south-idle)',
     stroke: '#e11d48',
@@ -192,7 +192,7 @@ export function SingaporeMap({
 
           {/* Sentosa Island */}
           <path
-            d="M 358 392 L 408 388 L 418 403 L 368 406 Z"
+            d="M 358 403 L 408 399 L 418 412 L 368 415 Z"
             fill={hoveredRegion === 'south' ? '#fb7185' : '#3b2231'}
             stroke="#fb7185"
             strokeWidth="1.4"
@@ -201,7 +201,7 @@ export function SingaporeMap({
             onMouseLeave={() => setHoveredRegion(null)}
             onClick={() => onEnterRegion('south')}
           />
-          <text x="390" y="420" textAnchor="middle" fill="rgba(253, 164, 175, 0.7)" fontSize="9.5">
+          <text x="390" y="426" textAnchor="middle" fill="rgba(253, 164, 175, 0.7)" fontSize="9.5">
             Sentosa
           </text>
 

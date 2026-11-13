@@ -504,7 +504,7 @@ export function DinnerInviteWizard() {
                       tabIndex={-1}
                       className="text-xl sm:text-2xl font-extrabold text-white tracking-tight focus:outline-none"
                     >
-                      Any Comments or Anything You Want to Say?
+                      Anything You Want to Say?
                     </h1>
                     <p className="text-xs sm:text-sm text-rose-200/85">
                       Your restaurant choice and comments will be sent to{' '}

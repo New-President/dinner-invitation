@@ -262,13 +262,20 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   let formSubmitMessage: string | null = null;
   try {
+    const incomingOrigin = request.headers.get('origin') || 'https://dinner-invitation-vg.vercel.app';
+    const incomingReferer = request.headers.get('referer') || `${incomingOrigin}/`;
+    const incomingUa =
+      request.headers.get('user-agent') ||
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
     const formSubmitRes = await fetch(`https://formsubmit.co/ajax/${RECIPIENT_EMAIL}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        Origin: 'http://localhost:3000',
-        Referer: 'http://localhost:3000/',
+        Origin: incomingOrigin,
+        Referer: incomingReferer,
+        'User-Agent': incomingUa,
       },
       body: JSON.stringify({
         _subject: subject,

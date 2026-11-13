@@ -248,6 +248,51 @@ export function DinnerInviteWizard() {
       }
 
       const timestamp = data.timestampSGT ?? 'Confirmed';
+      let finalDelivery = data.delivery ?? 'sent';
+
+      if (
+        finalDelivery !== 'gmail-smtp' &&
+        finalDelivery !== 'resend-api' &&
+        finalDelivery !== 'formsubmit-relay'
+      ) {
+        try {
+          const regionMeta = REGIONS[region];
+          const clientRelayRes = await fetch(
+            'https://formsubmit.co/ajax/zirenyong2004@gmail.com',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+              },
+              body: JSON.stringify({
+                _subject: `🎉 Dinner Confirmed: ${restaurant.name} (${regionMeta.name}) — Vegetarian Dinner Invite`,
+                _template: 'box',
+                Host: 'Yong Zi Ren',
+                From_Guest: finalGuestName,
+                Selected_Region: `${regionMeta.name} (${region.toUpperCase()})`,
+                Selected_Restaurant: `${restaurant.name} (${restaurant.cuisine})`,
+                Address: restaurant.address,
+                Google_Maps: restaurant.directionsUrl,
+                Message_For_Yong_Zi_Ren: finalComment,
+                Submitted_At_SGT: timestamp,
+              }),
+            }
+          );
+          const clientRelayData = (await clientRelayRes.json()) as {
+            success?: string | boolean;
+          };
+          if (
+            clientRelayData.success === 'true' ||
+            clientRelayData.success === true
+          ) {
+            finalDelivery = 'formsubmit-relay';
+          }
+        } catch {
+          // Proceed to confirmation screen even if client relay is blocked by an ad-blocker
+        }
+      }
+
       setConfirmedMapZoom(16);
       setConfirmedPan({ lat: 0, lng: 0 });
 
@@ -258,7 +303,7 @@ export function DinnerInviteWizard() {
           restaurant,
           comment: finalComment,
           guestName: finalGuestName,
-          deliveryStatus: data.delivery ?? 'sent',
+          deliveryStatus: finalDelivery,
           smtpWarning: data.smtpWarning,
           formSubmitInfo: data.formSubmitInfo,
           timestampSGT: timestamp,

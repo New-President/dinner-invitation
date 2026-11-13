@@ -8,9 +8,6 @@ import {
   MailCheck,
   MapPin,
   MessageSquare,
-  Minus,
-  Plus,
-  RotateCcw,
   Send,
   UtensilsCrossed,
 } from 'lucide-react';
@@ -114,11 +111,6 @@ export function DinnerInviteWizard() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [cheerTick, setCheerTick] = useState<number>(0);
-  const [confirmedMapZoom, setConfirmedMapZoom] = useState<number>(16);
-  const [confirmedPan, setConfirmedPan] = useState<{
-    readonly lat: number;
-    readonly lng: number;
-  }>({ lat: 0, lng: 0 });
 
   const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -293,9 +285,6 @@ export function DinnerInviteWizard() {
         }
       }
 
-      setConfirmedMapZoom(16);
-      setConfirmedPan({ lat: 0, lng: 0 });
-
       navigateWithTransition(() => {
         setWizardState({
           kind: 'thank-you',
@@ -357,18 +346,23 @@ export function DinnerInviteWizard() {
                     </button>
                   </div>
 
-                  <div className="text-center mx-auto px-2 sm:px-44 max-w-full">
+                  <div className="text-center mx-auto px-1 sm:px-44 max-w-full">
                     <h1
                       id="restaurant-step-heading"
                       ref={stepHeadingRef}
                       tabIndex={-1}
-                      className="text-base sm:text-xl md:text-2xl font-extrabold text-white tracking-tight whitespace-nowrap focus:outline-none"
+                      className="text-sm sm:text-xl md:text-2xl font-extrabold text-white tracking-tight sm:whitespace-nowrap focus:outline-none"
                     >
                       3 Vegetarian Restaurants in {regionMeta.name}
                     </h1>
-                    <p className="text-xs text-rose-200/85 mt-0.5 whitespace-nowrap">
+                    <p className="text-[11px] sm:text-xs text-rose-200/85 mt-0.5 sm:whitespace-nowrap">
                       Official Google Maps Live View · Select a restaurant below
                     </p>
+                    {region !== 'west' && (
+                      <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-400/45 px-3 py-0.5 text-[11px] font-semibold text-amber-200">
+                        ⚠️ Warning: Might be a bit late for dinner here since my exam ends at 7pm!
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -452,9 +446,9 @@ export function DinnerInviteWizard() {
                       <span>Back to Restaurants</span>
                     </button>
 
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/20 border border-rose-400/30 px-3.5 py-1.5 text-xs font-bold text-rose-200">
+                    <div className="inline-flex items-center gap-1.5 rounded-2xl sm:rounded-full bg-rose-500/20 border border-rose-400/30 px-3 py-1.5 text-[11px] sm:text-xs font-bold text-rose-200 max-w-full">
                       <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                      <span>
+                      <span className="break-words">
                         {selectedRestaurant.name} · {selectedRestaurant.cuisine} ({regionMeta.name})
                       </span>
                     </div>
@@ -629,36 +623,21 @@ export function DinnerInviteWizard() {
             const activeCheerMessage = cheerMessages[Math.floor(cheerTick / 2) % cheerMessages.length];
             const isBeatUp = cheerTick % 2 === 1;
 
-            const isConfirmedPanned = confirmedPan.lat !== 0 || confirmedPan.lng !== 0;
-            const confirmedLat = restaurant.coordinates.lat + confirmedPan.lat;
-            const confirmedLng = restaurant.coordinates.lng + confirmedPan.lng;
-            const confirmedMapSrc = isConfirmedPanned
-              ? `https://maps.google.com/maps?q=${confirmedLat.toFixed(6)},${confirmedLng.toFixed(6)}&ll=${confirmedLat.toFixed(6)},${confirmedLng.toFixed(6)}&t=m&z=${confirmedMapZoom}&output=embed`
-              : restaurant.mapEmbedUrl.replace(/([?&])z=\d+/, `$1z=${confirmedMapZoom}`);
-
-            const panConfirmedMap = (dLat: number, dLng: number) => {
-              const step = 0.0035 * Math.pow(1.65, 16 - confirmedMapZoom);
-              setConfirmedPan((prev) => ({
-                lat: prev.lat + dLat * step,
-                lng: prev.lng + dLng * step,
-              }));
-            };
-
             return (
               <section
                 aria-labelledby="thank-you-heading"
-                className="min-h-dvh w-full bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] p-3 sm:p-5 flex items-center justify-center"
+                className="min-h-dvh w-full overflow-x-hidden bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] p-2.5 sm:p-5 flex items-center justify-center"
               >
                 <div
                   style={{ maxWidth: '1400px' }}
-                  className="w-full rounded-[32px] bg-[#221824] border-2 border-rose-400/40 shadow-[0_24px_60px_rgba(225,29,72,0.28)] overflow-hidden flex flex-col"
+                  className="w-full rounded-[24px] sm:rounded-[32px] bg-[#221824] border-2 border-rose-400/40 shadow-[0_24px_60px_rgba(225,29,72,0.28)] overflow-hidden flex flex-col"
                 >
-                  <div className="relative bg-gradient-to-br from-rose-600 via-pink-600 to-purple-700 px-6 py-4 text-center text-white overflow-hidden shrink-0">
+                  <div className="relative bg-gradient-to-br from-rose-600 via-pink-600 to-purple-700 px-4 sm:px-6 py-3.5 sm:py-4 text-center text-white overflow-hidden shrink-0">
                     <h1
                       id="thank-you-heading"
                       ref={stepHeadingRef}
                       tabIndex={-1}
-                      className="text-2xl sm:text-4xl font-extrabold tracking-tight focus:outline-none"
+                      className="text-xl sm:text-4xl font-extrabold tracking-tight focus:outline-none"
                     >
                       Awesome, Dinner is Set! 🎉
                     </h1>
@@ -668,10 +647,10 @@ export function DinnerInviteWizard() {
                     </p>
                   </div>
 
-                  <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch flex-1">
+                  <div className="p-3.5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 items-stretch flex-1">
                     {/* Left Half (50%): Confirmed Dinner & Message Details */}
                     <div className="flex flex-col justify-between space-y-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-emerald-950/60 border border-emerald-400/30 px-4 py-3 text-xs sm:text-sm text-emerald-200">
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-emerald-950/60 border border-emerald-400/30 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-emerald-200">
                         <span className="inline-flex items-center gap-2 font-bold">
                           <MailCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                           Sent to Yong Zi Ren
@@ -679,13 +658,13 @@ export function DinnerInviteWizard() {
                         <span className="text-emerald-300 font-medium">{timestampSGT}</span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-3xl bg-[#18121a] text-white p-5 border border-white/10 flex-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-3xl bg-[#18121a] text-white p-4 sm:p-5 border border-white/10 flex-1">
                         <div className="space-y-3 flex flex-col justify-between">
                           <div>
                             <span className="inline-block rounded-full bg-rose-500 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
                               {regionMeta.name} ({region.toUpperCase()})
                             </span>
-                            <h2 className="mt-2 text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+                            <h2 className="mt-2 text-xl sm:text-3xl font-extrabold text-white leading-tight">
                               {restaurant.name}{' '}
                               {restaurant.chineseName && (
                                 <span className="font-normal text-rose-200">
@@ -726,91 +705,21 @@ export function DinnerInviteWizard() {
                           </div>
                         </div>
 
-                        <div className="rounded-2xl overflow-hidden border border-white/15 min-h-[240px] bg-black flex flex-col">
-                          <div className="px-2 py-1.5 bg-[#1f2022] border-b border-white/10 flex items-center justify-between gap-1 text-[10px] text-[#e8eaed]">
-                            <div className="inline-flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setConfirmedMapZoom((z) => Math.max(11, z - 1))}
-                                disabled={confirmedMapZoom <= 11}
-                                title="Zoom out map"
-                                className="h-6 w-6 rounded-md bg-[#35363a] hover:bg-rose-500 disabled:opacity-40 text-white inline-flex items-center justify-center cursor-pointer"
-                              >
-                                <Minus className="w-3 h-3" />
-                              </button>
-                              <span className="px-1 font-bold text-[#8ab4f8] tabular-nums">
-                                {confirmedMapZoom}z
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmedMapZoom((z) => Math.min(20, z + 1))}
-                                disabled={confirmedMapZoom >= 20}
-                                title="Zoom in map"
-                                className="h-6 w-6 rounded-md bg-[#35363a] hover:bg-rose-500 disabled:opacity-40 text-white inline-flex items-center justify-center cursor-pointer"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </button>
-                            </div>
-                            <div className="inline-flex items-center gap-0.5">
-                              <button
-                                type="button"
-                                onClick={() => panConfirmedMap(0, -1)}
-                                title="Pan West"
-                                className="h-6 w-5 rounded bg-[#35363a] hover:bg-[#4b4f54] text-white inline-flex items-center justify-center cursor-pointer font-bold"
-                              >
-                                ◀
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => panConfirmedMap(1, 0)}
-                                title="Pan North"
-                                className="h-6 w-5 rounded bg-[#35363a] hover:bg-[#4b4f54] text-white inline-flex items-center justify-center cursor-pointer font-bold"
-                              >
-                                ▲
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => panConfirmedMap(-1, 0)}
-                                title="Pan South"
-                                className="h-6 w-5 rounded bg-[#35363a] hover:bg-[#4b4f54] text-white inline-flex items-center justify-center cursor-pointer font-bold"
-                              >
-                                ▼
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => panConfirmedMap(0, 1)}
-                                title="Pan East"
-                                className="h-6 w-5 rounded bg-[#35363a] hover:bg-[#4b4f54] text-white inline-flex items-center justify-center cursor-pointer font-bold"
-                              >
-                                ▶
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setConfirmedMapZoom(16);
-                                  setConfirmedPan({ lat: 0, lng: 0 });
-                                }}
-                                title="Reset map center"
-                                className="h-6 w-6 ml-0.5 rounded bg-[#35363a] hover:bg-rose-500 text-rose-200 hover:text-white inline-flex items-center justify-center cursor-pointer"
-                              >
-                                <RotateCcw className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
+                        <div className="rounded-2xl overflow-hidden border border-white/15 min-h-[240px] bg-black">
                           <iframe
                             title={`Confirmed Dinner Location: ${restaurant.name}`}
-                            src={confirmedMapSrc}
+                            src={restaurant.mapEmbedUrl}
                             width="100%"
                             height="100%"
                             loading="lazy"
                             allowFullScreen
                             referrerPolicy="no-referrer-when-downgrade"
-                            className="w-full flex-1 min-h-[210px] border-0 pointer-events-auto"
+                            className="w-full h-full min-h-[240px] border-0 pointer-events-auto"
                           />
                         </div>
                       </div>
 
-                      <div className="rounded-2xl bg-white/5 border border-rose-400/25 p-5 space-y-1.5">
+                      <div className="rounded-2xl bg-white/5 border border-rose-400/25 p-4 sm:p-5 space-y-1.5">
                         <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold uppercase tracking-wider text-rose-300">
                           <span className="flex items-center gap-1.5">
                             <UtensilsCrossed className="w-3.5 h-3.5" /> Your Message for Yong Zi Ren
@@ -824,10 +733,10 @@ export function DinnerInviteWizard() {
                     </div>
 
                     {/* Right Half (Full 50% of Page): Huge Animated Fat Cute Cat Cheering for Exam */}
-                    <div className="flex flex-col items-center justify-between rounded-3xl bg-gradient-to-b from-[#2e1d36] via-[#24162b] to-[#1a1120] border-2 border-amber-400/45 p-5 sm:p-7 text-center relative overflow-hidden shadow-[0_0_50px_rgba(251,191,36,0.15)]">
+                    <div className="flex flex-col items-center justify-between rounded-3xl bg-gradient-to-b from-[#2e1d36] via-[#24162b] to-[#1a1120] border-2 border-amber-400/45 p-4 sm:p-7 text-center relative overflow-hidden shadow-[0_0_50px_rgba(251,191,36,0.15)]">
                       {/* Animated Speech Bubble */}
                       <div
-                        className="relative bg-white text-[#231728] rounded-3xl px-5 py-3 text-xs sm:text-base font-extrabold shadow-xl border-2 border-amber-400 max-w-md transition-transform duration-300"
+                        className="relative bg-white text-[#231728] rounded-3xl px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-base font-extrabold shadow-xl border-2 border-amber-400 max-w-md transition-transform duration-300"
                         style={{
                           transform: isBeatUp ? 'translateY(-6px) scale(1.03)' : 'translateY(0px) scale(1)',
                         }}
@@ -842,8 +751,8 @@ export function DinnerInviteWizard() {
                           viewBox="0 0 320 270"
                           role="img"
                           aria-label="Huge animated fat chubby cat jumping and waving pom-poms to cheer for your exam"
-                          style={{ width: '100%', maxWidth: '470px', height: '355px' }}
-                          className="mx-auto overflow-visible"
+                          style={{ width: '100%', maxWidth: '470px' }}
+                          className="h-[260px] sm:h-[355px] mx-auto overflow-visible"
                         >
                           {/* Animated Sunburst Rays Behind Cat */}
                           <g opacity="0.16">
@@ -1242,10 +1151,10 @@ export function DinnerInviteWizard() {
 
                       {/* Bottom Exam Cheer Copy */}
                       <div className="space-y-2 max-w-md mx-auto">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 border border-amber-300/40 px-4 py-1 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-amber-200 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 border border-amber-300/40 px-3 sm:px-4 py-1 text-[11px] sm:text-sm font-extrabold uppercase tracking-wider text-amber-200 whitespace-nowrap">
                           🐾 Exam Cheer Squad · Jiayou! 💪
                         </span>
-                        <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight whitespace-nowrap">
+                        <h3 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight sm:whitespace-nowrap">
                           All the Best for Your Exam! 🌟
                         </h3>
                         <p className="text-xs sm:text-sm text-rose-100/90 leading-relaxed">

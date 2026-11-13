@@ -66,13 +66,13 @@ export function SingaporeMap({
   const hoveredMeta = hoveredRegion ? REGIONS[hoveredRegion] : null;
 
   return (
-    <div className="h-dvh w-screen overflow-hidden p-5 sm:p-8 flex flex-col justify-between bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] text-white select-none">
+    <div className="min-h-dvh w-full overflow-x-hidden p-3.5 sm:p-8 flex flex-col justify-between bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] text-white select-none">
       {/* Top Map Status Bar */}
-      <div className="flex items-center justify-between gap-4 pb-3 border-b border-white/10 shrink-0">
+      <div className="flex items-center justify-between gap-3 pb-2.5 sm:pb-3 border-b border-white/10 shrink-0">
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-3 w-3 rounded-full bg-rose-400 shadow-[0_0_12px_#fb7185]" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-rose-200/90">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-rose-400 shadow-[0_0_12px_#fb7185] shrink-0" />
+            <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider sm:tracking-widest text-rose-200/90">
               SINGAPORE VEGETARIAN DINNER INVITATION · HOSTED BY YONG ZI REN
             </span>
           </div>
@@ -87,9 +87,9 @@ export function SingaporeMap({
       </div>
 
       {/* Center Full-Screen SVG Map Canvas */}
-      <div className="relative flex-1 w-full max-h-[72dvh] flex items-center justify-center my-2 min-h-0">
+      <div className="relative flex-1 w-full max-h-[70dvh] sm:max-h-[72dvh] flex items-center justify-center my-2 min-h-[260px]">
         <svg
-          viewBox="0 0 820 430"
+          viewBox="55 25 715 400"
           role="img"
           aria-label="Interactive map of Singapore divided into North, South, East, West, and Central regions"
           className="w-full h-full max-h-full select-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
@@ -412,24 +412,68 @@ export function SingaporeMap({
         </svg>
       </div>
 
+      {/* Mobile Touch Region Quick-Picker & Exam Timing Guide (Visible on Mobile Screens) */}
+      <div className="sm:hidden space-y-2 my-1 shrink-0">
+        <div className="rounded-xl bg-amber-500/15 border border-amber-400/40 px-3 py-2 text-[11px] font-semibold text-amber-200 flex items-center justify-between gap-2">
+          <span>📍 NUS is in West Singapore (Exam ends at 7:00 PM)</span>
+          <span className="text-amber-300 font-bold shrink-0">⚠️ Other regions may be late</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {REGION_ORDER.map((regionId) => {
+            const meta = REGIONS[regionId];
+            const isWest = regionId === 'west';
+            return (
+              <button
+                key={regionId}
+                type="button"
+                onClick={() => onEnterRegion(regionId)}
+                className={`touch-target rounded-xl px-3 py-2.5 text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                  isWest
+                    ? 'col-span-2 bg-rose-500/20 border-rose-400/60 text-white'
+                    : 'bg-white/5 border-white/15 text-rose-100'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-white">
+                    {regionId.toUpperCase()}
+                  </span>
+                  {isWest ? (
+                    <span className="rounded-full bg-emerald-500/25 border border-emerald-400/40 px-2 py-0.5 text-[10px] font-bold text-emerald-200">
+                      📍 Near NUS · Best after 7pm
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-500/20 border border-amber-400/40 px-1.5 py-0.5 text-[9px] font-bold text-amber-200 whitespace-nowrap shrink-0">
+                      ⚠️ Late after 7pm
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] text-rose-200/85 truncate mt-0.5">
+                  {meta.subtitle} · 3 Veg Spots
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Bottom Sleek Glassmorphic Neighbourhood Bar */}
-      <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 min-h-[68px]">
+      <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-3.5 sm:px-5 py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shrink-0 min-h-[60px] sm:min-h-[68px]">
         {hoveredRegion && hoveredMeta ? (
           <>
             <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="inline-block px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500 text-white">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-block px-2.5 sm:px-3 py-0.5 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider bg-rose-500 text-white">
                   {hoveredRegion.toUpperCase()}
                 </span>
-                <span className="text-sm font-semibold text-rose-200">
+                <span className="text-xs sm:text-sm font-semibold text-rose-200">
                   {hoveredMeta.subtitle}
                 </span>
                 {hoveredRegion !== 'west' ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 border border-amber-400/50 px-3 py-0.5 text-xs font-bold text-amber-200">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl sm:rounded-full bg-amber-500/20 border border-amber-400/50 px-2.5 sm:px-3 py-0.5 text-[11px] sm:text-xs font-bold text-amber-200">
                     ⚠️ Warning: Might be a bit late to have dinner here as I end my exam at 7pm
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-0.5 text-xs font-bold text-emerald-200">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl sm:rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 sm:px-3 py-0.5 text-[11px] sm:text-xs font-bold text-emerald-200">
                     ✅ Right near NUS · Perfect timing after my 7pm exam!
                   </span>
                 )}
@@ -440,12 +484,12 @@ export function SingaporeMap({
             </div>
 
             <div className="text-xs sm:text-sm font-semibold text-rose-200/90 shrink-0">
-              Click to view 3 vegetarian restaurants →
+              Tap or click to view 3 vegetarian restaurants →
             </div>
           </>
         ) : (
           <div className="w-full flex items-center justify-center text-xs sm:text-sm font-medium text-rose-100/90 text-center">
-            Hover over North, South, East, West, or Central on the Singapore map and click to view 3 vegetarian restaurants
+            Tap or hover over North, South, East, West, or Central on the Singapore map to view 3 vegetarian restaurants
           </div>
         )}
       </div>

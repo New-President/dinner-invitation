@@ -7,13 +7,8 @@ import {
   ExternalLink,
   Images,
   MapPin,
-  Maximize2,
-  Minimize2,
-  Minus,
   Navigation,
   Phone,
-  Plus,
-  RotateCcw,
 } from 'lucide-react';
 import { getLiveOpeningStatus, type Restaurant } from '@/lib/restaurants';
 
@@ -31,12 +26,6 @@ export function GoogleMapsRestaurantCard({
 }: GoogleMapsRestaurantCardProps) {
   const [photoOffset, setPhotoOffset] = useState<number>(0);
   const [now, setNow] = useState<Date>(() => new Date());
-  const [mapZoom, setMapZoom] = useState<number>(16);
-  const [panOffset, setPanOffset] = useState<{ readonly lat: number; readonly lng: number }>({
-    lat: 0,
-    lng: 0,
-  });
-  const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -55,35 +44,6 @@ export function GoogleMapsRestaurantCard({
   const cyclePhotos = () => {
     setPhotoOffset((prev) => (prev + 1) % photos.length);
   };
-
-  const handleZoomIn = () => {
-    setMapZoom((z) => Math.min(20, z + 1));
-  };
-
-  const handleZoomOut = () => {
-    setMapZoom((z) => Math.max(11, z - 1));
-  };
-
-  const handlePan = (dLat: number, dLng: number) => {
-    const step = 0.0035 * Math.pow(1.65, 16 - mapZoom);
-    setPanOffset((prev) => ({
-      lat: prev.lat + dLat * step,
-      lng: prev.lng + dLng * step,
-    }));
-  };
-
-  const handleResetMap = () => {
-    setMapZoom(16);
-    setPanOffset({ lat: 0, lng: 0 });
-  };
-
-  const isPanned = panOffset.lat !== 0 || panOffset.lng !== 0;
-  const targetLat = restaurant.coordinates.lat + panOffset.lat;
-  const targetLng = restaurant.coordinates.lng + panOffset.lng;
-
-  const interactiveMapSrc = isPanned
-    ? `https://maps.google.com/maps?q=${targetLat.toFixed(6)},${targetLng.toFixed(6)}&ll=${targetLat.toFixed(6)},${targetLng.toFixed(6)}&t=m&z=${mapZoom}&output=embed`
-    : restaurant.mapEmbedUrl.replace(/([?&])z=\d+/, `$1z=${mapZoom}`);
 
   return (
     <article
@@ -122,29 +82,29 @@ export function GoogleMapsRestaurantCard({
         </label>
 
         {/* Subheader: Rating · Price · Category · Live Open/Closed Status */}
-        <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-[#bdc1c6] whitespace-nowrap overflow-hidden">
-          <span className="font-bold text-white">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-1.5 gap-y-0.5 text-[11px] sm:text-xs text-[#bdc1c6] overflow-hidden">
+          <span className="font-bold text-white shrink-0">
             {restaurant.rating.toFixed(1)}
           </span>
           <span className="text-[#fbbc04] tracking-tighter shrink-0" aria-hidden="true">
             ★★★★★
           </span>
-          <span className="text-[#9aa0a6]">
+          <span className="text-[#9aa0a6] shrink-0">
             ({restaurant.reviewCount.toLocaleString()})
           </span>
-          <span>·</span>
-          <span>{restaurant.priceRange}</span>
-          <span>·</span>
+          <span className="shrink-0">·</span>
+          <span className="whitespace-nowrap shrink-0">{restaurant.priceRange}</span>
+          <span className="shrink-0">·</span>
           <span className="truncate">{restaurant.googleCategory}</span>
-          <span>·</span>
+          <span className="shrink-0">·</span>
           <span
-            className={`font-semibold shrink-0 ${
+            className={`font-semibold shrink-0 whitespace-nowrap ${
               liveStatus.isOpen ? 'text-[#81c995]' : 'text-[#f28b82]'
             }`}
           >
             {liveStatus.statusBadge}
           </span>
-          <span className="text-[#bdc1c6] shrink-0">
+          <span className="text-[#bdc1c6] shrink-0 whitespace-nowrap">
             · {liveStatus.detailText}
           </span>
         </div>
@@ -217,109 +177,12 @@ export function GoogleMapsRestaurantCard({
 
         {/* Bottom Bento Grid: Live Google Map (Left) + Live Opening Hours (Right) */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 flex-1">
-          {/* Interactive Google Map Embed + Zoom & Pan Controls + Address Footer */}
-          <div
-            className={`${
-              isMapExpanded ? 'sm:col-span-12' : 'sm:col-span-6'
-            } rounded-2xl bg-[#28292a] border border-white/10 overflow-hidden flex flex-col justify-between transition-all`}
-          >
-            {/* Interactive Map Toolbar: Zoom In/Out, Pan N/S/E/W, Reset, Expand */}
-            <div className="px-1.5 py-1 bg-[#1f2022] border-b border-white/10 flex items-center justify-between gap-1 text-[10px] text-[#e8eaed]">
-              <div className="inline-flex items-center gap-0.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleZoomOut}
-                  disabled={mapZoom <= 11}
-                  title="Zoom out map"
-                  aria-label={`Zoom out map of ${restaurant.name}`}
-                  className="h-5 w-5 rounded bg-[#35363a] hover:bg-rose-500 disabled:opacity-40 text-white inline-flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <Minus className="w-3 h-3" />
-                </button>
-                <span className="px-1 font-bold text-[#8ab4f8] tabular-nums text-[10px]">
-                  {mapZoom}z
-                </span>
-                <button
-                  type="button"
-                  onClick={handleZoomIn}
-                  disabled={mapZoom >= 20}
-                  title="Zoom in map"
-                  aria-label={`Zoom in map of ${restaurant.name}`}
-                  className="h-5 w-5 rounded bg-[#35363a] hover:bg-rose-500 disabled:opacity-40 text-white inline-flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-
-              <div className="inline-flex items-center gap-0.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handlePan(0, -1)}
-                  title="Pan West"
-                  aria-label="Pan map West"
-                  className="h-5 w-4 rounded bg-[#35363a] hover:bg-[#4b4f54] text-white inline-flex items-center justify-center cursor-pointer text-[9px] font-bold"
-                >
-                  ◀
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePan(1, 0)}
-                  title="Pan North"
-                  aria-label="Pan map North"
-                  className="h-5 w-4 rounded bg-[#35363a] hover:bg-[#4b4f54] text-white inline-flex items-center justify-center cursor-pointer text-[9px] font-bold"
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePan(-1, 0)}
-                  title="Pan South"
-                  aria-label="Pan map South"
-                  className="h-5 w-4 rounded bg-[#35363a] hover:bg-[#4b4f54] text-white inline-flex items-center justify-center cursor-pointer text-[9px] font-bold"
-                >
-                  ▼
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePan(0, 1)}
-                  title="Pan East"
-                  aria-label="Pan map East"
-                  className="h-5 w-4 rounded bg-[#35363a] hover:bg-[#4b4f54] text-white inline-flex items-center justify-center cursor-pointer text-[9px] font-bold"
-                >
-                  ▶
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetMap}
-                  title="Re-center on restaurant pin"
-                  aria-label={`Reset map center for ${restaurant.name}`}
-                  className="h-5 w-5 rounded bg-[#35363a] hover:bg-rose-500 text-rose-200 hover:text-white inline-flex items-center justify-center cursor-pointer transition-colors"
-                >
-                  <RotateCcw className="w-2.5 h-2.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsMapExpanded((v) => !v)}
-                  title={isMapExpanded ? 'Shrink map view' : 'Expand map view for easier navigation'}
-                  aria-label={isMapExpanded ? 'Shrink map view' : 'Expand map view'}
-                  className="h-5 w-5 rounded bg-[#35363a] hover:bg-rose-500 text-[#8ab4f8] hover:text-white inline-flex items-center justify-center cursor-pointer transition-colors"
-                >
-                  {isMapExpanded ? (
-                    <Minimize2 className="w-2.5 h-2.5" />
-                  ) : (
-                    <Maximize2 className="w-2.5 h-2.5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div
-              style={{ height: isMapExpanded ? '270px' : '180px' }}
-              className="relative w-full bg-[#161718]"
-            >
+          {/* Left Column: Live Google Map Embed (Width & Height >= 220px activates built-in Google drag/zoom UI) */}
+          <div className="sm:col-span-7 rounded-2xl bg-[#28292a] border border-white/10 overflow-hidden flex flex-col justify-between">
+            <div style={{ height: '220px' }} className="relative w-full bg-[#161718]">
               <iframe
                 title={`Google Map of ${restaurant.name}`}
-                src={interactiveMapSrc}
+                src={restaurant.mapEmbedUrl}
                 width="100%"
                 height="100%"
                 loading="lazy"
@@ -335,7 +198,8 @@ export function GoogleMapsRestaurantCard({
                   {restaurant.address}
                 </p>
                 <p className="text-[10px] text-[#9aa0a6] truncate">
-                  {targetLat.toFixed(4)}° N, {targetLng.toFixed(4)}° E · Drag or use +/− to zoom
+                  {restaurant.coordinates.lat.toFixed(4)}° N,{' '}
+                  {restaurant.coordinates.lng.toFixed(4)}° E
                 </p>
               </div>
               <a
@@ -353,11 +217,7 @@ export function GoogleMapsRestaurantCard({
           </div>
 
           {/* Right Column: Live Opening Hours Card */}
-          <div
-            className={`${
-              isMapExpanded ? 'sm:col-span-12' : 'sm:col-span-6'
-            } rounded-2xl bg-[#28292a] border border-white/10 p-3 flex flex-col justify-between`}
-          >
+          <div className="sm:col-span-5 rounded-2xl bg-[#28292a] border border-white/10 p-3 flex flex-col justify-between">
             <div className="space-y-2.5">
               {/* Header + Live SGT Clock */}
               <div className="flex items-center justify-between gap-1">

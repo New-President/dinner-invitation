@@ -63,6 +63,7 @@ export function SingaporeMap({
   headingRef,
 }: SingaporeMapProps) {
   const [hoveredRegion, setHoveredRegion] = useState<RegionId | null>(null);
+  const hoveredMeta = hoveredRegion ? REGIONS[hoveredRegion] : null;
 
   return (
     <div className="min-h-dvh w-full overflow-x-hidden p-3.5 sm:p-8 flex flex-col justify-between bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] text-white select-none">
@@ -403,7 +404,7 @@ export function SingaporeMap({
                     fontSize="11"
                     fontWeight="600"
                   >
-                    Warning: We might have a late dinner if it is at another region!
+                    Warning: Might be a bit late for dinner here since my exam ends at 7pm!
                   </text>
                 </g>
               );
@@ -411,12 +412,50 @@ export function SingaporeMap({
         </svg>
       </div>
 
-      {/* Bottom Yellow Exam Timing Warning Box */}
-      <div className="rounded-2xl bg-amber-500/15 border border-amber-400/45 px-4 sm:px-6 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4 shrink-0">
-        <span>📍 NUS is in West Singapore (Exam ends at 7:00 PM)</span>
-        <span className="text-amber-300 font-bold">
-          ⚠️ We might have a late dinner if it is at another region!
-        </span>
+      {/* Bottom Area: Mobile Yellow Warning + Glassmorphic Neighbourhood Bar */}
+      <div className="flex flex-col gap-2.5 shrink-0">
+        {/* Mobile-Only Yellow Warning Banner */}
+        <div className="sm:hidden rounded-xl bg-amber-500/15 border border-amber-400/45 px-3.5 py-2.5 text-xs font-semibold text-amber-200 text-center leading-relaxed shadow-lg">
+          ⚠️ <span className="font-bold text-amber-300">Heads up:</span> NUS is in West Singapore (exam ends at 7:00 PM) — we might have a late dinner if it is at another region!
+        </div>
+
+        {/* Bottom Sleek Glassmorphic Neighbourhood Bar (Desktop / Tablet) */}
+        <div className="hidden sm:flex rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-3.5 sm:px-5 py-3 sm:py-3.5 flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shrink-0 min-h-[60px] sm:min-h-[68px]">
+        {hoveredRegion && hoveredMeta ? (
+          <>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-block px-2.5 sm:px-3 py-0.5 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider bg-rose-500 text-white">
+                  {hoveredRegion.toUpperCase()}
+                </span>
+                <span className="text-xs sm:text-sm font-semibold text-rose-200">
+                  {hoveredMeta.subtitle}
+                </span>
+                {hoveredRegion !== 'west' ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-xl sm:rounded-full bg-amber-500/20 border border-amber-400/50 px-2.5 sm:px-3 py-0.5 text-[11px] sm:text-xs font-bold text-amber-200">
+                    ⚠️ Warning: Might be a bit late to have dinner here as I end my exam at 7pm
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-xl sm:rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 sm:px-3 py-0.5 text-[11px] sm:text-xs font-bold text-emerald-200">
+                    ✅ Right near NUS · Perfect timing after my 7pm exam!
+                  </span>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm text-rose-100/85">
+                <strong className="text-white">{hoveredMeta.name}</strong> · {hoveredMeta.tagline}
+              </p>
+            </div>
+
+            <div className="text-xs sm:text-sm font-semibold text-rose-200/90 shrink-0">
+              Tap or click to view 3 vegetarian restaurants →
+            </div>
+          </>
+        ) : (
+          <div className="w-full flex items-center justify-center text-xs sm:text-sm font-medium text-rose-100/90 text-center">
+            Tap or hover over North, South, East, West, or Central on the Singapore map to view 3 vegetarian restaurants
+          </div>
+        )}
+        </div>
       </div>
     </div>
   );

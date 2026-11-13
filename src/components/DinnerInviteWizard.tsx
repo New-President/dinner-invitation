@@ -111,9 +111,11 @@ export function DinnerInviteWizard() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [cheerTick, setCheerTick] = useState<number>(0);
+  const [showCutePopup, setShowCutePopup] = useState<boolean>(true);
 
   const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const cuteCatSectionRef = useRef<HTMLDivElement | null>(null);
   const isFirstRender = useRef<boolean>(true);
 
   useEffect(() => {
@@ -126,10 +128,22 @@ export function DinnerInviteWizard() {
 
   useEffect(() => {
     if (wizardState.kind !== 'thank-you') return;
+    setShowCutePopup(true);
     const timer = setInterval(() => {
       setCheerTick((t) => (t + 1) % 6);
     }, 520);
     return () => clearInterval(timer);
+  }, [wizardState.kind]);
+
+  useEffect(() => {
+    if (wizardState.kind !== 'thank-you') return;
+    const onScroll = () => {
+      if (window.scrollY > 280) {
+        setShowCutePopup(false);
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, [wizardState.kind]);
 
   const resolveRestaurantForRegion = (region: RegionId): Restaurant => {
@@ -360,7 +374,7 @@ export function DinnerInviteWizard() {
                     </p>
                     {region !== 'west' && (
                       <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-400/45 px-3 py-0.5 text-[11px] font-semibold text-amber-200">
-                        ⚠️ Warning: Might be a bit late for dinner here since my exam ends at 7pm!
+                        ⚠️ Warning: We might have a late dinner if it is at another region (Exam ends at 7pm)!
                       </p>
                     )}
                   </div>
@@ -623,11 +637,63 @@ export function DinnerInviteWizard() {
             const activeCheerMessage = cheerMessages[Math.floor(cheerTick / 2) % cheerMessages.length];
             const isBeatUp = cheerTick % 2 === 1;
 
+            const scrollToCuteCat = () => {
+              setShowCutePopup(false);
+              cuteCatSectionRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+              });
+            };
+
             return (
               <section
                 aria-labelledby="thank-you-heading"
-                className="min-h-dvh w-full overflow-x-hidden bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] p-2.5 sm:p-5 flex items-center justify-center"
+                className="min-h-dvh w-full overflow-x-hidden bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] p-2.5 sm:p-5 flex items-center justify-center relative"
               >
+                {/* Floating Pop-Up Notification Informing User Something Cute Lies Below */}
+                {showCutePopup && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-md rounded-2xl bg-gradient-to-r from-[#2c1934] via-[#3b1d3f] to-[#2c1934] border-2 border-amber-400 shadow-[0_16px_45px_rgba(251,191,36,0.45)] p-3.5 text-white flex items-center justify-between gap-3 animate-bounce"
+                  >
+                    <button
+                      type="button"
+                      onClick={scrollToCuteCat}
+                      className="flex items-center gap-3 text-left flex-1 cursor-pointer focus:outline-none"
+                    >
+                      <span className="h-10 w-10 rounded-full bg-amber-400/20 border border-amber-300/60 flex items-center justify-center text-xl shrink-0">
+                        🐱
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-extrabold text-amber-200 whitespace-nowrap">
+                          Psst… Something Cute Lies Below! 🐾✨
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-rose-100/90">
+                          Tap here or scroll down for a special surprise ↓
+                        </p>
+                      </div>
+                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={scrollToCuteCat}
+                        className="rounded-full bg-amber-400 hover:bg-amber-300 text-[#231728] font-extrabold px-3 py-1.5 text-xs transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        See Below ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCutePopup(false)}
+                        aria-label="Close cute surprise notification"
+                        className="h-7 w-7 rounded-full bg-white/10 hover:bg-white/20 text-rose-200 inline-flex items-center justify-center text-xs font-bold cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div
                   style={{ maxWidth: '1400px' }}
                   className="w-full rounded-[24px] sm:rounded-[32px] bg-[#221824] border-2 border-rose-400/40 shadow-[0_24px_60px_rgba(225,29,72,0.28)] overflow-hidden flex flex-col"
@@ -733,7 +799,11 @@ export function DinnerInviteWizard() {
                     </div>
 
                     {/* Right Half (Full 50% of Page): Huge Animated Fat Cute Cat Cheering for Exam */}
-                    <div className="flex flex-col items-center justify-between rounded-3xl bg-gradient-to-b from-[#2e1d36] via-[#24162b] to-[#1a1120] border-2 border-amber-400/45 p-4 sm:p-7 text-center relative overflow-hidden shadow-[0_0_50px_rgba(251,191,36,0.15)]">
+                    <div
+                      id="cute-cat-section"
+                      ref={cuteCatSectionRef}
+                      className="flex flex-col items-center justify-between rounded-3xl bg-gradient-to-b from-[#2e1d36] via-[#24162b] to-[#1a1120] border-2 border-amber-400/45 p-4 sm:p-7 text-center relative overflow-hidden shadow-[0_0_50px_rgba(251,191,36,0.15)]"
+                    >
                       {/* Animated Speech Bubble */}
                       <div
                         className="relative bg-white text-[#231728] rounded-3xl px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-base font-extrabold shadow-xl border-2 border-amber-400 max-w-md transition-transform duration-300"

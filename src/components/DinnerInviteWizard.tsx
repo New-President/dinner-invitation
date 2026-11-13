@@ -415,12 +415,19 @@ export function DinnerInviteWizard() {
                     Select one of the 3 vegetarian restaurants in {regionMeta.name}
                   </legend>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-4 w-full pt-2">
                     {regionRestaurants.map((restaurant) => {
                       const isSelected = selectedRestaurant.id === restaurant.id;
                       const radioId = `restaurant-radio-${restaurant.id}`;
                       return (
-                        <div key={restaurant.id} className="relative flex flex-col">
+                        <div
+                          key={restaurant.id}
+                          className={`relative flex flex-col ${
+                            restaurant.ziRenWantsToTry
+                              ? 'order-first lg:order-none'
+                              : ''
+                          }`}
+                        >
                           <input
                             type="radio"
                             id={radioId}

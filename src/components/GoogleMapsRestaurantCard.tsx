@@ -49,14 +49,27 @@ export function GoogleMapsRestaurantCard({
 
   return (
     <article
-      className={`flex flex-col rounded-[24px] overflow-hidden transition-all duration-200 border-2 h-full justify-between ${
+      className={`relative flex flex-col rounded-[24px] transition-all duration-200 border-2 h-full justify-between ${
         isGoldPick
           ? 'border-amber-400 ring-2 ring-amber-400/55 shadow-[0_0_38px_rgba(251,191,36,0.38)] hover:border-yellow-300 hover:shadow-[0_0_48px_rgba(251,191,36,0.55)] bg-gradient-to-b from-[#2c2212] via-[#1f1f1f] to-[#241c10] text-[#e8eaed]'
           : 'border-[#35363a] hover:border-rose-500 hover:ring-2 hover:ring-rose-400/35 hover:shadow-[0_16px_40px_rgba(225,29,72,0.28)] shadow-xl bg-[#1f1f1f] text-[#e8eaed]'
       }`}
     >
+      {/* Top-Center Floating Gold Badge ("Zi Ren Wants To Try") at the Circled Top Border Area */}
+      {isGoldPick && (
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20">
+          <span className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-[#231728] text-xs font-black tracking-wide shadow-[0_6px_18px_rgba(251,191,36,0.45)] border-2 border-[#fffbeb] whitespace-nowrap">
+            ★ Zi Ren Wants To Try
+          </span>
+        </div>
+      )}
+
       {/* Top Official Google Knowledge Panel Header */}
-      <div className="px-4 pt-3.5 pb-2.5 space-y-1 shrink-0">
+      <div
+        className={`px-4 pb-2.5 space-y-1 shrink-0 ${
+          isGoldPick ? 'pt-5' : 'pt-3.5'
+        }`}
+      >
         {/* Location Area Breadcrumb & Cuisine Pill */}
         <div className="flex items-center justify-between gap-2 text-[11px] text-[#9aa0a6]">
           <span className="inline-flex items-center gap-1 truncate font-medium text-[#bdc1c6]">
@@ -67,15 +80,15 @@ export function GoogleMapsRestaurantCard({
             />
             <span className="truncate">{restaurant.areaName} · Singapore</span>
           </span>
-          {isGoldPick ? (
-            <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-[#231728] font-extrabold shrink-0 whitespace-nowrap shadow-md">
-              ★ Zi Ren wants to try
-            </span>
-          ) : (
-            <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-400/30 text-rose-200 font-semibold shrink-0 whitespace-nowrap">
-              {restaurant.cuisine}
-            </span>
-          )}
+          <span
+            className={`px-2.5 py-0.5 rounded-full font-semibold shrink-0 whitespace-nowrap ${
+              isGoldPick
+                ? 'bg-amber-400/20 border border-amber-300/45 text-amber-200'
+                : 'bg-rose-500/15 border border-rose-400/30 text-rose-200'
+            }`}
+          >
+            {restaurant.cuisine}
+          </span>
         </div>
 
         {/* Single-Line No-Wrap Title */}
@@ -84,26 +97,19 @@ export function GoogleMapsRestaurantCard({
           onClick={onPickRestaurant}
           className="block cursor-pointer"
         >
-          <div className="flex items-center justify-between gap-2">
-            <h2
-              title={`${restaurant.name}${restaurant.chineseName ? ` ${restaurant.chineseName}` : ''}`}
-              className={`text-lg sm:text-xl font-bold tracking-tight truncate whitespace-nowrap ${
-                isGoldPick ? 'text-amber-300' : 'text-white'
-              }`}
-            >
-              {restaurant.name}
-              {restaurant.chineseName ? (
-                <span className="ml-1.5 font-normal text-[#bdc1c6] text-base">
-                  {restaurant.chineseName}
-                </span>
-              ) : null}
-            </h2>
-            {isGoldPick && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/45 text-[10px] font-bold text-amber-200 shrink-0 whitespace-nowrap">
-                {restaurant.cuisine}
+          <h2
+            title={`${restaurant.name}${restaurant.chineseName ? ` ${restaurant.chineseName}` : ''}`}
+            className={`text-lg sm:text-xl font-bold tracking-tight truncate whitespace-nowrap ${
+              isGoldPick ? 'text-amber-300' : 'text-white'
+            }`}
+          >
+            {restaurant.name}
+            {restaurant.chineseName ? (
+              <span className="ml-1.5 font-normal text-[#bdc1c6] text-base">
+                {restaurant.chineseName}
               </span>
-            )}
-          </div>
+            ) : null}
+          </h2>
         </label>
 
         {/* Subheader: Rating · Price · Category · Live Open/Closed Status */}
@@ -316,7 +322,7 @@ export function GoogleMapsRestaurantCard({
 
       {/* Bottom Full-Width Selection CTA Button */}
       <div
-        className={`px-3.5 pb-3.5 pt-1 shrink-0 ${
+        className={`px-3.5 pb-3.5 pt-1 rounded-b-[22px] shrink-0 ${
           isGoldPick ? 'bg-[#241c10]' : 'bg-[#1f1f1f]'
         }`}
       >
@@ -332,7 +338,7 @@ export function GoogleMapsRestaurantCard({
           <Check className="w-4 h-4 stroke-[2.5] shrink-0" />
           <span className="truncate">
             Select {restaurant.name}
-            {isGoldPick ? ' · Zi Ren wants to try' : ''}
+            {isGoldPick ? ' · Zi Ren Wants To Try' : ''}
           </span>
         </button>
       </div>

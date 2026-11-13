@@ -199,6 +199,78 @@ export const RESTAURANTS: readonly Restaurant[] = [
     ],
   },
   {
+    id: asRestaurantId('original-sin-holland-village'),
+    region: 'west',
+    name: 'Original Sin',
+    chineseName: '原味地中海',
+    ziRenWantsToTry: true,
+    areaName: 'Holland Village · Chip Bee',
+    googleCategory: 'Vegetarian restaurant',
+    openStatusText: 'Opens 11:30 am',
+    popularTimesPeak: 'Peak 7 pm – 9 pm',
+    coordinates: { lat: 1.3107755, lng: 103.7964544 },
+    cuisine: 'Mediterranean & Italian Mezze',
+    rating: 4.3,
+    reviewCount: 1231,
+    priceRange: '$30–50',
+    address: 'Blk 43 Jln Merah Saga, #01-62 Chip Bee Gardens, Singapore 278115',
+    postalCode: '278115',
+    hours: 'Daily 11:30 am – 2:30 pm, 6:00 pm – 10:30 pm',
+    serviceTag: 'Chip Bee Gardens courtyard · Iconic since 1997',
+    phone: '+65 6475 5605',
+    websiteUrl: 'https://www.originalsin.sg',
+    directionsUrl: createGoogleMapDirections(
+      'Original Sin',
+      '43 Jln Merah Saga, Chip Bee Gardens, Singapore 278115'
+    ),
+    mapEmbedUrl: createGoogleMapEmbed(
+      'Original Sin, 43 Jln Merah Saga, Chip Bee Gardens, Singapore 278115',
+      { lat: 1.3107755, lng: 103.7964544 }
+    ),
+    description:
+      'Established in 1997 in leafy Chip Bee Gardens right near NUS, Original Sin is Singapore’s premier Mediterranean & Italian vegetarian restaurant—complete with al-fresco courtyard dining, baked feta, and wood-fired pizzas.',
+    vibe: 'Warm Mediterranean courtyard in Chip Bee Gardens',
+    highlights: [
+      'Bosco Misto — Spinach, Feta & Mushroom Filo Parcel with Chili Jam',
+      'Mezze Platter — Hummus, Baba Ganoush, Falafel & Warm Pita',
+      'Magic Mushroom Wood-Fired Pizza with Truffle Oil & Mozzarella',
+      'Spanakopita & Warm Baklava with Vanilla Bean Gelato',
+    ],
+    reviews: [
+      {
+        author: 'Genevieve L.',
+        rating: 5,
+        text: 'Hands down one of the best vegetarian dinner spots in Singapore. Sitting under the lights at Chip Bee Gardens with Bosco Misto is perfection.',
+        timeAgo: '4 days ago',
+      },
+      {
+        author: 'Lucas R.',
+        rating: 5,
+        text: 'Even my non-vegetarian friends rave about Original Sin. The Mediterranean mezze platter and truffle pizza are world-class.',
+        timeAgo: '2 weeks ago',
+      },
+    ],
+    photos: [
+      {
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLeCxfZ4NPXKYEWklawjezk73G3pfnHpgMqJBuqLldGTBOmClJ9u73cBehVm-TVfRuOiPIWE_Ofw4Mh59rGCjAJAF3yt7d1GsoQ4B7OYbAeJncn2d9UYQLvn08Ib-M9tk7IyOd6MEOYi95wu=w720-h540-k-no',
+        caption: 'Mediterranean Mezze & Bosco Misto',
+        rating: '4.3 ★ (1,231)',
+      },
+      {
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLeOqZwaOV2bPe-APaAT2S5D6oykCxh6kLOS9qknYusjt5Xeebu2TYdiQg0jt0Syll4FrutS09AupfWUfbH9P7lF0O7oAu6gXGNmSgRZxLxV2VZ2Cd1WjunFLUV9mfnAhasOQgSuRKvXkOPi=w720-h540-k-no',
+        caption: 'Wood-Fired Magic Mushroom Pizza',
+      },
+      {
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLfAbxEA5NjXTJcXx9ZYPnZ6T9fm6n3Nl-6nlxEtOTDiZ3q6i5aHov12swvqAODYP9wZLK7BXkYcDaux7uWWQdOLQ9iv72Wm3VsoFMI7qFIF8u1nIprQ7vf-LCE1cyqVgCuBV4LSdPd08P76=w720-h540-k-no',
+        caption: 'Baked Feta, Falafel & Italian Pastas',
+      },
+      {
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLcFoa7ul3VogcQ0wCc8xI5VnfgvzA-7XFvGiExk88CS7-MpBZgVBNVgid6xKQL7_Mat86QBbvR5-aWs-MEZTP2mY1LNLgfSngdbOz57S7EjANMDk65IFr-cb5qFqHn2yI1g7HZwKs7tun9x=w720-h540-k-no',
+        caption: 'Chip Bee Gardens Courtyard Patio',
+      },
+    ],
+  },
+  {
     id: asRestaurantId('saute-san-jurong'),
     region: 'west',
     name: 'Saute-san Jurong Point',
@@ -266,78 +338,6 @@ export const RESTAURANTS: readonly Restaurant[] = [
       {
         url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLd4h9wYfr6jIgDyoMQPAggajg_jXZp129lZZPuSUrZwqaVqO_jqiXKW2LymnbYCRZyc0_5yYUwU9K4L5dhMDeIPnaFhddD2Y2dF1W5gluD9p5lJDLBcxcQl-rzvQ18JrHNrY042lTGYYkk=w720-h540-k-no',
         caption: 'Jurong Point Vegetarian Kitchen',
-      },
-    ],
-  },
-  {
-    id: asRestaurantId('original-sin-holland-village'),
-    region: 'west',
-    name: 'Original Sin',
-    chineseName: '原味地中海',
-    ziRenWantsToTry: true,
-    areaName: 'Holland Village · Chip Bee (Near NUS)',
-    googleCategory: 'Vegetarian restaurant',
-    openStatusText: 'Opens 11:30 am',
-    popularTimesPeak: 'Peak 7 pm – 9 pm',
-    coordinates: { lat: 1.3107755, lng: 103.7964544 },
-    cuisine: 'Mediterranean & Italian Mezze',
-    rating: 4.3,
-    reviewCount: 1231,
-    priceRange: '$30–50',
-    address: 'Blk 43 Jln Merah Saga, #01-62 Chip Bee Gardens, Singapore 278115',
-    postalCode: '278115',
-    hours: 'Daily 11:30 am – 2:30 pm, 6:00 pm – 10:30 pm',
-    serviceTag: 'Chip Bee Gardens courtyard · Iconic since 1997',
-    phone: '+65 6475 5605',
-    websiteUrl: 'https://www.originalsin.sg',
-    directionsUrl: createGoogleMapDirections(
-      'Original Sin',
-      '43 Jln Merah Saga, Chip Bee Gardens, Singapore 278115'
-    ),
-    mapEmbedUrl: createGoogleMapEmbed(
-      'Original Sin, 43 Jln Merah Saga, Chip Bee Gardens, Singapore 278115',
-      { lat: 1.3107755, lng: 103.7964544 }
-    ),
-    description:
-      'Established in 1997 in leafy Chip Bee Gardens right near NUS, Original Sin is Singapore’s premier Mediterranean & Italian vegetarian restaurant—complete with al-fresco courtyard dining, baked feta, and wood-fired pizzas.',
-    vibe: 'Warm Mediterranean courtyard in Chip Bee Gardens',
-    highlights: [
-      'Bosco Misto — Spinach, Feta & Mushroom Filo Parcel with Chili Jam',
-      'Mezze Platter — Hummus, Baba Ganoush, Falafel & Warm Pita',
-      'Magic Mushroom Wood-Fired Pizza with Truffle Oil & Mozzarella',
-      'Spanakopita & Warm Baklava with Vanilla Bean Gelato',
-    ],
-    reviews: [
-      {
-        author: 'Genevieve L.',
-        rating: 5,
-        text: 'Hands down one of the best vegetarian dinner spots in Singapore. Sitting under the lights at Chip Bee Gardens with Bosco Misto is perfection.',
-        timeAgo: '4 days ago',
-      },
-      {
-        author: 'Lucas R.',
-        rating: 5,
-        text: 'Even my non-vegetarian friends rave about Original Sin. The Mediterranean mezze platter and truffle pizza are world-class.',
-        timeAgo: '2 weeks ago',
-      },
-    ],
-    photos: [
-      {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLeCxfZ4NPXKYEWklawjezk73G3pfnHpgMqJBuqLldGTBOmClJ9u73cBehVm-TVfRuOiPIWE_Ofw4Mh59rGCjAJAF3yt7d1GsoQ4B7OYbAeJncn2d9UYQLvn08Ib-M9tk7IyOd6MEOYi95wu=w720-h540-k-no',
-        caption: 'Mediterranean Mezze & Bosco Misto',
-        rating: '4.3 ★ (1,231)',
-      },
-      {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLeOqZwaOV2bPe-APaAT2S5D6oykCxh6kLOS9qknYusjt5Xeebu2TYdiQg0jt0Syll4FrutS09AupfWUfbH9P7lF0O7oAu6gXGNmSgRZxLxV2VZ2Cd1WjunFLUV9mfnAhasOQgSuRKvXkOPi=w720-h540-k-no',
-        caption: 'Wood-Fired Magic Mushroom Pizza',
-      },
-      {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLfAbxEA5NjXTJcXx9ZYPnZ6T9fm6n3Nl-6nlxEtOTDiZ3q6i5aHov12swvqAODYP9wZLK7BXkYcDaux7uWWQdOLQ9iv72Wm3VsoFMI7qFIF8u1nIprQ7vf-LCE1cyqVgCuBV4LSdPd08P76=w720-h540-k-no',
-        caption: 'Baked Feta, Falafel & Italian Pastas',
-      },
-      {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLcFoa7ul3VogcQ0wCc8xI5VnfgvzA-7XFvGiExk88CS7-MpBZgVBNVgid6xKQL7_Mat86QBbvR5-aWs-MEZTP2mY1LNLgfSngdbOz57S7EjANMDk65IFr-cb5qFqHn2yI1g7HZwKs7tun9x=w720-h540-k-no',
-        caption: 'Chip Bee Gardens Courtyard Patio',
       },
     ],
   },

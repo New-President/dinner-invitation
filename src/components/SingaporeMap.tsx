@@ -66,9 +66,9 @@ export function SingaporeMap({
   const hoveredMeta = hoveredRegion ? REGIONS[hoveredRegion] : null;
 
   return (
-    <div className="min-h-dvh w-full overflow-x-hidden p-3.5 sm:p-8 flex flex-col justify-between bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] text-white select-none">
+    <div className="h-dvh w-full overflow-hidden p-3.5 sm:p-6 flex flex-col justify-between gap-2 bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] text-white select-none">
       {/* Top Map Status Bar */}
-      <div className="flex items-center justify-between gap-3 pb-2.5 sm:pb-3 border-b border-white/10 shrink-0">
+      <div className="relative z-10 flex items-center justify-between gap-3 pb-2.5 sm:pb-3 border-b border-white/10 shrink-0">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-rose-400 shadow-[0_0_12px_#fb7185] shrink-0" />
@@ -87,12 +87,16 @@ export function SingaporeMap({
       </div>
 
       {/* Center Full-Screen SVG Map Canvas */}
-      <div className="relative flex-1 w-full max-h-[70dvh] sm:max-h-[72dvh] flex items-center justify-center my-2 min-h-[260px]">
+      <div
+        style={{ maxHeight: 'calc(100dvh - 185px)' }}
+        className="relative flex-1 min-h-0 w-full overflow-hidden flex items-center justify-center py-1"
+      >
         <svg
-          viewBox="55 25 715 400"
+          viewBox="0 0 820 430"
           role="img"
           aria-label="Interactive map of Singapore divided into North, South, East, West, and Central regions"
-          className="w-full h-full max-h-full select-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
+          style={{ width: '100%', height: '100%', maxHeight: 'calc(100dvh - 190px)' }}
+          className="w-full h-full select-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
           preserveAspectRatio="xMidYMid meet"
         >
           <defs>
@@ -413,7 +417,7 @@ export function SingaporeMap({
       </div>
 
       {/* Bottom Area: Mobile Yellow Warning + Glassmorphic Neighbourhood Bar */}
-      <div className="flex flex-col gap-2.5 shrink-0">
+      <div className="relative z-10 flex flex-col gap-2 shrink-0">
         {/* Mobile-Only Yellow Warning Banner */}
         <div className="sm:hidden rounded-xl bg-amber-500/15 border border-amber-400/45 px-3.5 py-2.5 text-xs font-semibold text-amber-200 text-center leading-relaxed shadow-lg">
           ⚠️ <span className="font-bold text-amber-300">Heads up:</span> NUS is in West Singapore (exam ends at 7:00 PM) — we might have a late dinner if it is at another region!

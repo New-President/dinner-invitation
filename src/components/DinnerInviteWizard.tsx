@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
+  CalendarPlus,
   ExternalLink,
   Loader2,
   MailCheck,
@@ -87,11 +88,33 @@ function navigateWithTransition(
   updateDOM();
 }
 
-const COMMENT_SUGGESTIONS = [
-  'Looking forward to catching up over a great dinner!',
-  'Excited to try the signature vegetarian dishes here!',
-  'Let me know what day and time works best for you!',
-] as const;
+function buildGoogleCalendarUrl(restaurant: Restaurant, comment: string): string {
+  const now = new Date();
+  const sgtDateStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Singapore',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(now)
+    .replace(/-/g, '');
+
+  const dates = `${sgtDateStr}T193000/${sgtDateStr}T210000`;
+  const title = `Vegetarian Dinner at ${restaurant.name} with Yong Zi Ren`;
+  const details = `Celebratory vegetarian dinner after 7:00 PM exam!${
+    comment ? `\n\nNote: ${comment}` : ''
+  }\n\nGoogle Maps: ${restaurant.directionsUrl}`;
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates,
+    details,
+    location: restaurant.address,
+    ctz: 'Asia/Singapore',
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
 
 export function DinnerInviteWizard() {
   const [wizardState, setWizardState] = useState<WizardState>({
@@ -376,7 +399,7 @@ export function DinnerInviteWizard() {
                       3 Vegetarian Restaurants in {regionMeta.name}
                     </h1>
                     <p className="text-[11px] sm:text-xs text-rose-200/85 mt-0.5 sm:whitespace-nowrap">
-                      Official Google Maps Live View · Select a restaurant below
+                      Select a restaurant below
                     </p>
                     {region !== 'west' && (
                       <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-400/45 px-3 py-0.5 text-[11px] font-semibold text-amber-200">
@@ -536,14 +559,12 @@ export function DinnerInviteWizard() {
                         setCommentError(msg);
                       }}
                       aria-invalid={commentError ? 'true' : 'false'}
-                      aria-describedby={
-                        commentError ? 'dinner-comment-error' : 'dinner-comment-hint'
-                      }
+                      aria-describedby={commentError ? 'dinner-comment-error' : undefined}
                       placeholder="Write anything you want to say — dish cravings, dietary notes, or preferred timing!"
                       className="touch-target w-full rounded-2xl border border-white/15 bg-black/30 p-3.5 text-white placeholder:text-rose-200/40 focus:border-rose-400 focus:outline-none"
                     />
 
-                    {commentError ? (
+                    {commentError && (
                       <p
                         id="dinner-comment-error"
                         role="alert"
@@ -551,30 +572,7 @@ export function DinnerInviteWizard() {
                       >
                         {commentError}
                       </p>
-                    ) : (
-                      <p
-                        id="dinner-comment-hint"
-                        className="mt-1.5 text-xs text-rose-200/70"
-                      >
-                        Tap a quick prompt below or type your own note ({commentDraft.length}/2000):
-                      </p>
                     )}
-
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {COMMENT_SUGGESTIONS.map((suggestion, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            setCommentDraft(suggestion);
-                            setCommentError(null);
-                          }}
-                          className="rounded-full bg-white/10 hover:bg-white/20 text-rose-200 px-3 py-1 text-xs font-medium transition-colors cursor-pointer text-left"
-                        >
-                          + “{suggestion}”
-                        </button>
-                      ))}
-                    </div>
                   </div>
 
                   {submitError && (
@@ -732,16 +730,44 @@ export function DinnerInviteWizard() {
                             <div>
                               <strong>📞 Phone:</strong> {restaurant.phone}
                             </div>
-                            <div className="pt-2">
+                            <div className="pt-2 flex flex-wrap items-center gap-2">
                               <a
                                 href={restaurant.directionsUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 hover:bg-rose-400 text-white font-bold px-4 py-2 text-xs sm:text-sm transition-colors"
+                                className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 hover:bg-rose-400 text-white font-bold px-3.5 py-2 text-xs sm:text-sm transition-colors"
                               >
                                 <span>Open in Google Maps</span>
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </a>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const ua =
+                                    typeof navigator !== 'undefined'
+                                      ? navigator.userAgent
+                                      : '';
+                                  const isAppleDevice =
+                                    /(iPhone|iPad|iPod|Macintosh)/i.test(ua) &&
+                                    !/Android/i.test(ua);
+                                  if (isAppleDevice) {
+                                    window.location.href = `/api/calendar?restaurantId=${encodeURIComponent(
+                                      restaurant.id
+                                    )}&comment=${encodeURIComponent(comment)}`;
+                                  } else {
+                                    window.open(
+                                      buildGoogleCalendarUrl(restaurant, comment),
+                                      '_blank',
+                                      'noopener,noreferrer'
+                                    );
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-[#231728] font-extrabold px-3.5 py-2 text-xs sm:text-sm transition-colors cursor-pointer shadow-md"
+                              >
+                                <CalendarPlus className="w-3.5 h-3.5 shrink-0" />
+                                <span>Add to Calendar</span>
+                              </button>
                             </div>
                           </div>
                         </div>

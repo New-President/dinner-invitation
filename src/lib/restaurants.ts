@@ -959,20 +959,20 @@ export const RESTAURANTS: readonly Restaurant[] = [
     ],
     photos: [
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLcYmh7M103nK_h4pGr_y1PRrKMpIdkrZWwl0fb-EHBWf8EyGZpp0TNIKuKtzXKe7bZGsSc5jw3oKDSSRoOpffDWR1lldyGtAIsFMaZn3pJnW3dN3tTrHOMB9HMSNIBT2YWIICRdvg=w720-h540-k-no',
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLfiH_Myze8M982_t82b7WcTgSvnVSEjnBNlMV6ZqtF4sYmB6VsJYkg-0xFXxpeTQaTjAJihT3YqqWuEaz2-YJ31sltXWCyz3XvNwhl23sFO-sY62v5d7GLyjKaexg9mgxoqzwAGCQ_6XQ01=w720-h540-k-no',
         caption: 'Heritage Indian Thali & Paneer Masala',
         rating: '4.2 ★ (480)',
       },
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLdxKI24wiGyhoEIGoeFQ1nZrcdXArDYwu-HvpARW0Av2b4jcsI5vzCpcR3z_Wg2D0cah7DtPWJfVx4dxMu1cz1MKqUKG72CmbkncpLUVJdKsDtOdflZjog3igJ3h4HbBgqv1GSThw=w720-h540-k-no',
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLfQKTNhJ1XF64pNhPbA0kkwnf3ryhDEit0RoBSMlUcoOwSBrKcgI_Gt9GM0foL8zLBcvVy4VurVuWUYDdlrF77SNpZFQJqo5zhHmXrW7Y_-Nrk9ikhcmVQQY4ZXTvEcF8qeTuJcUmi-vUY=w720-h540-k-no',
         caption: 'Crispy Golden Masala Dosai & Chutneys',
       },
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLcxy3RjowhP3Fcm9QTC4eTtPyoO4vUzrXQl08iYls-uK7VzhkdTSRGIItr5rdg--sg_ecGUCoj49jQkAeAEaKbFdv_b6LnSEkmdncswiePDw0CQaMvnaSRqCOkaowCjyfYYqRmM=w720-h540-k-no',
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLcyR9WfPQoLx53NvehbQXf3WgTanzrNuQb0_--xdcz-KqZzJkpXFfKg9PTe62swbU13XzsHNqSbjAABiHoU8K-E4_ijKO4Dn9rYS-BcuyldMSKbHaSlCv83pcxJ3pKeorRSXImrcPFr6yJB=w720-h540-k-no',
         caption: 'North & South Indian Vegetarian Feast',
       },
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLe0qtHLKw0SbYYhJli7nfZPy3giYA-BLLhp9lX04D7V1ZBzyYWc0zCQPVjavVKA47qMXFhZaMetJX7yvkB02NjTwXmcQ5lrpV8ga2L9L70fvDAGh9-8Rw7VqUd_Lx54cJ3zRRI=w720-h540-k-no',
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLeY28z8BFiFDgEHtaoPX21SIH8CVzkQ6Xfgqb5ZHM1sAxUzD-1eBQM6ST12zF07deMjzDQDIlLveyIRP7awjy_8VJPGFmr99LIOE9tN_VglB1ogWPLAgTco6iJH8uBfGsNqAiJ2sY6Adt2o=w720-h540-k-no',
         caption: 'Spiced Briyani, Naan & Filter Coffee',
       },
     ],
@@ -982,34 +982,34 @@ export const RESTAURANTS: readonly Restaurant[] = [
   {
     id: asRestaurantId('elemen-harbourfront'),
     region: 'south',
-    name: 'elemen 元素 (VivoCity)',
+    name: 'elemen 元素 (HarbourFront)',
     chineseName: '元素天然素食',
     areaName: 'HarbourFront · VivoCity',
     googleCategory: 'Vegetarian restaurant',
     openStatusText: 'Opens 11:30 am',
     popularTimesPeak: 'Peak 6:30 pm – 8:30 pm',
-    coordinates: { lat: 1.2644, lng: 103.8222 },
+    coordinates: { lat: 1.2651258, lng: 103.820149 },
     cuisine: 'Modern Natural Meatless Dining',
     rating: 4.5,
     reviewCount: 890,
     priceRange: '$25–40',
-    address: '1 HarbourFront Walk, #02-150 VivoCity, Singapore 098585',
-    postalCode: '098585',
+    address: '1 Maritime Square, #02-85 HarbourFront Centre, Singapore 099253',
+    postalCode: '099253',
     hours: 'Daily 11:30 am – 4:00 pm, 5:30 pm – 10:00 pm',
-    serviceTag: 'Waterfront VivoCity dining · 8-course natural meatless',
-    phone: '+65 6255 1576',
-    websiteUrl: 'https://www.elemen.com.sg',
+    serviceTag: 'HarbourFront waterfront dining · 8-course natural meatless',
+    phone: '+65 6904 9568',
+    websiteUrl: 'https://www.elemengroup.com.sg',
     directionsUrl: createGoogleMapDirections(
-      'elemen VivoCity',
-      '1 HarbourFront Walk, VivoCity, Singapore 098585'
+      'elemen HarbourFront',
+      '1 Maritime Square, HarbourFront Centre, Singapore 099253'
     ),
     mapEmbedUrl: createGoogleMapEmbed(
-      'elemen VivoCity, 1 HarbourFront Walk, Singapore 098585',
-      { lat: 1.2644, lng: 103.8222 }
+      'elemen, 1 Maritime Square, HarbourFront Centre, Singapore 099253',
+      { lat: 1.2651258, lng: 103.820149 }
     ),
     description:
-      'Modern natural meatless restaurant at VivoCity along the Southern Waterfront, celebrating wholesome plant-based ingredients with Truffle Wild Mushroom Risotto, Blue Pea Flower Roll, and Tempura Tofu.',
-    vibe: 'Relaxed waterfront dining at VivoCity HarbourFront',
+      'Modern natural meatless restaurant at HarbourFront along the Southern Waterfront, celebrating wholesome plant-based ingredients with Truffle Wild Mushroom Risotto, Blue Pea Flower Roll, and Tempura Tofu.',
+    vibe: 'Relaxed waterfront dining at HarbourFront',
     highlights: [
       'Wild Mushroom & Black Truffle Risotto',
       'Signature Blue Pea Flower Sushi Roll with Avocado',
@@ -1018,9 +1018,9 @@ export const RESTAURANTS: readonly Restaurant[] = [
     ],
     reviews: [
       {
-        author: ' Clarissa T.',
+        author: 'MEGUMI NAKAZAWA',
         rating: 5,
-        text: 'Lovely dinner spot at VivoCity! Their 5-course and 8-course meatless sets are super worth it and beautifully plated.',
+        text: 'Lovely dinner spot at HarbourFront! Their 5-course and 8-course meatless sets are super worth it and beautifully plated.',
         timeAgo: '1 week ago',
       },
       {
@@ -1032,21 +1032,21 @@ export const RESTAURANTS: readonly Restaurant[] = [
     ],
     photos: [
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLcaRcZ4L4fjdWgFCPkodu2XaQZp_qZkAKMTet7Mxv1xusvE2o0LAqVZxV8W6OTF16H2xLDmg68_ZGLPAYoFgBLodQhKDc3VGJcv7iuxsQXXjX-s9sf3isQ7kuFis5isz7r93khS3SyM-sxZ=w720-h540-k-no',
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLcCsHqUpJ_Bdo0xBm707oDM6MpVzX4cOJjx6RATgAsBMN52JHvdcsOa4JRD7O7vK9KOQ6Xcu10aSgVdBy4Eqwzpr7N1nlX5ZkFOc_60I8emvWdUstfXfsuZa1Wbnke146m7ZZqiyn1IdIS0=w720-h540-k-no',
         caption: 'Modern Natural Meatless Course',
         rating: '4.5 ★ (890)',
       },
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLfCWMOB6XXXzXAfizbCmrKlVM2DnO_MCBabWte00ds_UY1MFLiwHT_Jin_UowoqjD6-go6VtoHHqU4RJb-qjbIq9S-eoxkQCYi_g-EpUBQoaOiGEMs70hYmVtQwmTYx90eUsopB35mjvKZc=w720-h540-k-no',
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLfWuEiDDjCLUPC3Gu0PmJBlm5V_JKJI91czlKLElBsr4dr9s3byD2C0ISuNyzS6ef1KZ8qTZmbL6V3Cnvvge8RZk1L5W-DMa_IvxhQSJLJTkcMAheG6BXXuvT7Zmo6JypHM5KOAiL115Nf4=w720-h540-k-no',
         caption: 'Truffle Wild Mushroom Risotto & Tempura',
       },
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLek8o8TX0G2FoT1Y0uJYyLTYF5K69TkYPlUKO3IajBLiF0wU3vYfzcByQqF8Fw4PinKhmm73GMY2t8ovyyBklmrvGCWGIopNss5G53lSqZXlSkHRTh8PAz2FHncK6YsN93oCOGwIvx7fD4=w720-h540-k-no',
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLdL0HdrnGlLcqo4iyW6q1ltfO1KFnLi9gpROnLGP0dkGro_xVvZx74N3vZCjUzkDDKtzTtAcgh6zN0BuHbyrE21RnLUmLxu-dd5C170yK4jZeMcGYM7tAkCiFXriLLEBMC8uNUS8CauxffK=w720-h540-k-no',
         caption: 'Blue Pea Flower Roll & Appetizers',
       },
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLc7iedXEYwARsxzYpYtx8zStQgy4vnOSrzK8cdkw74s6qNqWmPS0-NZah_bWMAf09syipr6-RmEKTguugbZRKJ6CsI3UKlZiquhxa6mvXlESc7pAEkNY3R7vnj-r3OnifO_NsVaEKdtXq_o=w720-h540-k-no',
-        caption: 'VivoCity HarbourFront Dining Space',
+        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLfPqP9Q3PZtI-2UVWqCePq8RNdIzJWfXOBF4NkD36VXtSy6yz8SxxRuDCgYQnQDip8Viw8tXJGMl6LjL95eVxhMm0r4PBtOQAjQx61lfg5VGpI9HJvT5Srkbi6DBHcyjoTpXyfSC7WGjv91=w720-h540-k-no',
+        caption: 'HarbourFront Centre Dining Space',
       },
     ],
   },

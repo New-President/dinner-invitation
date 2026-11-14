@@ -95,7 +95,11 @@ export function SingaporeMap({
           viewBox="0 0 820 430"
           role="img"
           aria-label="Interactive map of Singapore divided into North, South, East, West, and Central regions"
-          style={{ width: '100%', height: '100%', maxHeight: 'calc(100dvh - 190px)' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            maxHeight: 'calc(100dvh - 190px)',
+          }}
           className="w-full h-full select-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
           preserveAspectRatio="xMidYMid meet"
         >
@@ -239,7 +243,7 @@ export function SingaporeMap({
                   className="transition-all duration-300"
                 />
 
-                {isHighlighted && (
+                {regionId === 'west' && (
                   <circle
                     cx={shape.labelPos.x}
                     cy={shape.labelPos.y - 12}
@@ -419,46 +423,51 @@ export function SingaporeMap({
       {/* Bottom Area: Mobile Yellow Warning + Glassmorphic Neighbourhood Bar */}
       <div className="relative z-10 flex flex-col gap-2 shrink-0">
         {/* Mobile-Only Yellow Warning Banner */}
-        <div className="sm:hidden rounded-xl bg-amber-500/15 border border-amber-400/45 px-3.5 py-2.5 text-xs font-semibold text-amber-200 text-center leading-relaxed shadow-lg">
+        <div data-mini-floor className="sm:hidden rounded-xl bg-amber-500/15 border border-amber-400/45 px-3.5 py-2.5 text-xs font-semibold text-amber-200 text-center leading-relaxed shadow-lg">
           ⚠️ <span className="font-bold text-amber-300">Heads up:</span> NUS is in West Singapore (exam ends at 7:00 PM) — we might have a late dinner if it is at another region!
         </div>
 
-        {/* Bottom Sleek Glassmorphic Neighbourhood Bar (Desktop / Tablet) */}
-        <div className="hidden sm:flex rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-3.5 sm:px-5 py-3 sm:py-3.5 flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shrink-0 min-h-[60px] sm:min-h-[68px]">
-        {hoveredRegion && hoveredMeta ? (
-          <>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-block px-2.5 sm:px-3 py-0.5 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider bg-rose-500 text-white">
-                  {hoveredRegion.toUpperCase()}
-                </span>
-                <span className="text-xs sm:text-sm font-semibold text-rose-200">
-                  {hoveredMeta.subtitle}
-                </span>
-                {hoveredRegion !== 'west' ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-xl sm:rounded-full bg-amber-500/20 border border-amber-400/50 px-2.5 sm:px-3 py-0.5 text-[11px] sm:text-xs font-bold text-amber-200">
-                    ⚠️ Warning: Might be a bit late to have dinner here as I end my exam at 7pm
+        <div data-mini-floor className="hidden sm:flex rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 py-2.5 px-4 sm:px-5 sm:flex-row sm:items-center justify-between gap-3 shrink-0 h-[80px] overflow-clip">
+          {hoveredRegion && hoveredMeta ? (
+            <>
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2 min-w-0 overflow-clip whitespace-nowrap">
+                  <span className="inline-block px-2.5 sm:px-3 py-0.5 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider bg-rose-500 text-white shrink-0">
+                    {hoveredRegion.toUpperCase()}
                   </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-xl sm:rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 sm:px-3 py-0.5 text-[11px] sm:text-xs font-bold text-emerald-200">
-                    ✅ Right near NUS · Perfect timing after my 7pm exam!
+                  <span className="text-xs sm:text-sm font-semibold text-rose-200 truncate">
+                    {hoveredMeta.subtitle}
                   </span>
-                )}
+                  {hoveredRegion !== 'west' ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 border border-amber-400/50 px-2.5 sm:px-3 py-0.5 text-[11px] sm:text-xs font-bold text-amber-200 shrink-0">
+                      <span className="lg:hidden">⚠️ Exam ends 7pm at NUS · Might be late!</span>
+                      <span className="hidden lg:inline">
+                        ⚠️ Warning: Might be a bit late to have dinner here as I end my exam at 7pm
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 sm:px-3 py-0.5 text-[11px] sm:text-xs font-bold text-emerald-200 shrink-0">
+                      <span className="lg:hidden">✅ Right near NUS · Great after 7pm exam!</span>
+                      <span className="hidden lg:inline">
+                        ✅ Right near NUS · Perfect timing after my 7pm exam!
+                      </span>
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs sm:text-sm text-rose-100/85 truncate">
+                  <strong className="text-white">{hoveredMeta.name}</strong> · {hoveredMeta.tagline}
+                </p>
               </div>
-              <p className="text-xs sm:text-sm text-rose-100/85">
-                <strong className="text-white">{hoveredMeta.name}</strong> · {hoveredMeta.tagline}
-              </p>
-            </div>
 
-            <div className="text-xs sm:text-sm font-semibold text-rose-200/90 shrink-0">
-              Tap or click to view 3 vegetarian restaurants →
+              <div className="hidden xl:block text-xs sm:text-sm font-semibold text-rose-200/90 shrink-0 whitespace-nowrap">
+                Tap or click to view 3 vegetarian restaurants →
+              </div>
+            </>
+          ) : (
+            <div className="w-full flex items-center justify-center text-xs sm:text-sm font-medium text-rose-100/90 text-center">
+              Tap or hover over North, South, East, West, or Central on the Singapore map to view 3 vegetarian restaurants
             </div>
-          </>
-        ) : (
-          <div className="w-full flex items-center justify-center text-xs sm:text-sm font-medium text-rose-100/90 text-center">
-            Tap or hover over North, South, East, West, or Central on the Singapore map to view 3 vegetarian restaurants
-          </div>
-        )}
+          )}
         </div>
       </div>
     </div>

@@ -6,6 +6,9 @@ import {
   type RestaurantId,
 } from './restaurants';
 
+/** Name used when the guest leaves the name field blank. */
+export const DEFAULT_GUEST_NAME = 'Dinner Guest';
+
 export interface InviteSubmission {
   readonly region: RegionId;
   readonly restaurantId: RestaurantId;
@@ -70,7 +73,7 @@ export function parseInviteSubmission(raw: unknown): ValidationResult {
     return { ok: false, error: 'Comment must be 2,000 characters or fewer.' };
   }
 
-  const guestName = readOptionalString(raw.guestName, 120, 'Dinner Guest');
+  const guestName = readOptionalString(raw.guestName, 120, DEFAULT_GUEST_NAME);
 
   return {
     ok: true,

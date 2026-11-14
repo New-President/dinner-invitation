@@ -45,7 +45,7 @@ export function GoogleMapsRestaurantCard({
     setPhotoOffset((prev) => (prev + 1) % photos.length);
   };
 
-  const isGoldPick = Boolean(restaurant.ziRenWantsToTry);
+  const isGoldPick = Boolean(restaurant.hostWantsToTry);
 
   return (
     <article
@@ -55,7 +55,7 @@ export function GoogleMapsRestaurantCard({
           : 'border-[#35363a] hover:border-rose-500 hover:ring-2 hover:ring-rose-400/35 hover:shadow-[0_16px_40px_rgba(225,29,72,0.28)] shadow-xl bg-[#1f1f1f] text-[#e8eaed]'
       }`}
     >
-      {/* Top-Center Floating Gold Badge ("Zi Ren Wants To Try") at the Circled Top Border Area */}
+      {/* Top-center floating gold badge for the host's pick, on the top border */}
       {isGoldPick && (
         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20">
           <span className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-[#231728] text-xs font-black tracking-wide shadow-[0_6px_18px_rgba(251,191,36,0.45)] border-2 border-[#fffbeb] whitespace-nowrap">
@@ -113,30 +113,32 @@ export function GoogleMapsRestaurantCard({
         </label>
 
         {/* Subheader: Rating · Price · Category · Live Open/Closed Status */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-1.5 gap-y-0.5 text-[11px] sm:text-xs text-[#bdc1c6] overflow-hidden">
-          <span className="font-bold text-white shrink-0">
-            {restaurant.rating.toFixed(1)}
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] sm:text-xs text-[#bdc1c6] min-w-0">
+          <span className="inline-flex items-center gap-x-1.5 whitespace-nowrap">
+            <span className="font-bold text-white">
+              {restaurant.rating.toFixed(1)}
+            </span>
+            <span className="text-[#fbbc04] tracking-tighter" aria-hidden="true">
+              ★★★★★
+            </span>
+            <span className="text-[#9aa0a6]">
+              ({restaurant.reviewCount.toLocaleString()})
+            </span>
           </span>
-          <span className="text-[#fbbc04] tracking-tighter shrink-0" aria-hidden="true">
-            ★★★★★
-          </span>
-          <span className="text-[#9aa0a6] shrink-0">
-            ({restaurant.reviewCount.toLocaleString()})
-          </span>
-          <span className="shrink-0">·</span>
-          <span className="whitespace-nowrap shrink-0">{restaurant.priceRange}</span>
-          <span className="shrink-0">·</span>
-          <span className="truncate">{restaurant.googleCategory}</span>
-          <span className="shrink-0">·</span>
-          <span
-            className={`font-semibold shrink-0 whitespace-nowrap ${
-              liveStatus.isOpen ? 'text-[#81c995]' : 'text-[#f28b82]'
-            }`}
-          >
-            {liveStatus.statusBadge}
-          </span>
-          <span className="text-[#bdc1c6] shrink-0 whitespace-nowrap">
-            · {liveStatus.detailText}
+          <span aria-hidden="true">·</span>
+          <span className="whitespace-nowrap">{restaurant.priceRange}</span>
+          <span aria-hidden="true">·</span>
+          <span className="min-w-0 break-words">{restaurant.googleCategory}</span>
+          <span aria-hidden="true">·</span>
+          <span className="whitespace-nowrap">
+            <span
+              className={`font-semibold ${
+                liveStatus.isOpen ? 'text-[#81c995]' : 'text-[#f28b82]'
+              }`}
+            >
+              {liveStatus.statusBadge}
+            </span>
+            <span className="text-[#bdc1c6]"> · {liveStatus.detailText}</span>
           </span>
         </div>
       </div>
@@ -251,7 +253,7 @@ export function GoogleMapsRestaurantCard({
           <div className="sm:col-span-5 rounded-2xl bg-[#28292a] border border-white/10 p-3 flex flex-col justify-between">
             <div className="space-y-2.5">
               {/* Header + Live SGT Clock */}
-              <div className="flex items-center justify-between gap-1">
+              <div className="flex flex-wrap items-center justify-between gap-1">
                 <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#e8eaed] whitespace-nowrap">
                   <Clock className="w-3 h-3 text-[#8ab4f8] shrink-0" />
                   <span>Opening Hours</span>
@@ -273,7 +275,7 @@ export function GoogleMapsRestaurantCard({
                   <span
                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                       liveStatus.isOpen
-                        ? 'bg-[#81c995] animate-pulse'
+                        ? 'bg-[#81c995] motion-safe:animate-pulse'
                         : 'bg-[#f28b82]'
                     }`}
                   />
@@ -298,7 +300,7 @@ export function GoogleMapsRestaurantCard({
                 {liveStatus.scheduleLines.map((line, index) => (
                   <p
                     key={index}
-                    className="text-xs font-medium text-[#e8eaed] whitespace-nowrap"
+                    className="text-xs font-medium text-[#e8eaed] break-words"
                   >
                     {line}
                   </p>

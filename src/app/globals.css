@@ -47,6 +47,22 @@ select {
   min-height: 48px;
 }
 
+.mini-drag-handle {
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.mini-drag-handle.dragging {
+  cursor: grabbing;
+}
+
+/* Keep the companion stage still while page view transitions slide the steps. */
+.mini-stage {
+  view-transition-name: mini-companion-stage;
+}
+
 input:user-invalid,
 textarea:user-invalid {
   border-color: #e11d48;
@@ -120,7 +136,7 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
     transform: translateY(0px) rotate(0deg);
   }
   50% {
-    transform: translateY(-10px) rotate(3deg);
+    transform: translateY(-8px) rotate(2deg);
   }
 }
 
@@ -139,109 +155,902 @@ html:active-view-transition-type(backward)::view-transition-new(root) {
   }
 }
 
+@keyframes cat-glow-pulse {
+  0%,
+  100% {
+    transform: scale(0.95);
+    opacity: 0.16;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.24;
+  }
+}
+
+@keyframes cat-shadow-pulse {
+  0%,
+  100% {
+    transform: scaleX(1.03);
+    opacity: 0.48;
+  }
+  50% {
+    transform: scaleX(0.84);
+    opacity: 0.28;
+  }
+}
+
 @keyframes cat-bounce {
   0%,
   100% {
-    transform: translateY(0px) scale(1.05, 0.95);
+    transform: translateY(0px) scale(1.03, 0.97);
   }
   50% {
-    transform: translateY(-22px) scale(0.96, 1.06);
+    transform: translateY(-10px) scale(0.98, 1.03);
+  }
+}
+
+@keyframes cat-ear-left {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes cat-ear-right {
+  0%,
+  100% {
+    transform: rotate(5deg);
+  }
+  50% {
+    transform: rotate(-5deg);
   }
 }
 
 @keyframes cat-cheer-left {
   0%,
   100% {
-    transform: rotate(-32deg) translateY(4px);
+    transform: rotate(-18deg) translateY(2px);
   }
   50% {
-    transform: rotate(28deg) translateY(-16px) scale(1.08);
+    transform: rotate(18deg) translateY(-7px);
   }
 }
 
 @keyframes cat-cheer-right {
   0%,
   100% {
-    transform: rotate(32deg) translateY(4px);
+    transform: rotate(18deg) translateY(2px);
   }
   50% {
-    transform: rotate(-28deg) translateY(-16px) scale(1.08);
+    transform: rotate(-18deg) translateY(-7px);
   }
 }
 
 @keyframes cat-tail {
   0%,
   100% {
-    transform: rotate(-22deg);
+    transform: rotate(-14deg);
   }
   50% {
-    transform: rotate(26deg);
+    transform: rotate(18deg);
   }
 }
 
-@keyframes cat-feet-kick {
+@keyframes cat-foot-left {
   0%,
   100% {
-    transform: translateY(0px) rotate(-6deg);
+    transform: translateY(0px) rotate(-4deg);
   }
   50% {
-    transform: translateY(-10px) rotate(8deg);
+    transform: translateY(-5px) rotate(5deg);
+  }
+}
+
+@keyframes cat-foot-right {
+  0%,
+  100% {
+    transform: translateY(-5px) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(0px) rotate(4deg);
   }
 }
 
 @keyframes confetti-float {
   0%,
   100% {
-    transform: translateY(0px) scale(1) rotate(0deg);
+    transform: translateY(0px) scale(1);
   }
   50% {
-    transform: translateY(-16px) scale(1.15) rotate(12deg);
+    transform: translateY(-7px) scale(1.06);
   }
 }
 
-.animate-float-gentle {
-  animation: float-gentle 2.4s ease-in-out infinite;
+@keyframes mini-bob {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
 }
 
-.animate-pulse-ring {
-  animation: pulse-ring 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+@keyframes mini-walk-leg-a {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(-10deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(10deg);
+  }
 }
 
-.animate-cat-bounce {
-  animation: cat-bounce 0.68s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+@keyframes mini-walk-leg-b {
+  0%,
+  100% {
+    transform: translateY(-2px) rotate(10deg);
+  }
+  50% {
+    transform: translateY(0px) rotate(-10deg);
+  }
+}
+
+@keyframes mini-sweat-drop {
+  0%,
+  100% {
+    transform: translateY(0px);
+    opacity: 0.92;
+  }
+  50% {
+    transform: translateY(3px);
+    opacity: 0.55;
+  }
+}
+
+@keyframes mini-flail-left {
+  0%,
+  100% {
+    transform: rotate(-28deg);
+  }
+  50% {
+    transform: rotate(22deg);
+  }
+}
+
+@keyframes mini-flail-right {
+  0%,
+  100% {
+    transform: rotate(28deg);
+  }
+  50% {
+    transform: rotate(-22deg);
+  }
+}
+
+@keyframes mini-kick-a {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(-18deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(16deg);
+  }
+}
+
+@keyframes mini-kick-b {
+  0%,
+  100% {
+    transform: translateY(-4px) rotate(16deg);
+  }
+  50% {
+    transform: translateY(0px) rotate(-18deg);
+  }
+}
+
+@keyframes table-steam {
+  0% {
+    transform: translateY(2px);
+    opacity: 0.18;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 0.65;
+  }
+  100% {
+    transform: translateY(-9px);
+    opacity: 0.1;
+  }
+}
+
+@keyframes guest-wave {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-float-gentle {
+    animation: float-gentle 2.4s ease-in-out infinite;
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+}
+
+/* Character animations (Mini, the guest, the cheer cat) always run: they are the point of the page. */
+
+  .animate-cat-glow {
+    animation: cat-glow-pulse 1.5s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-cat-shadow {
+    animation: cat-shadow-pulse 0.78s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-cat-bounce {
+    animation: cat-bounce 0.78s cubic-bezier(0.34, 1.45, 0.64, 1) infinite;
+    transform-box: fill-box;
+    transform-origin: center bottom;
+  }
+
+  .animate-cat-ear-left {
+    animation: cat-ear-left 0.78s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: right bottom;
+  }
+
+  .animate-cat-ear-right {
+    animation: cat-ear-right 0.78s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: left bottom;
+  }
+
+  .animate-cat-cheer-left {
+    animation: cat-cheer-left 0.52s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: right center;
+  }
+
+  .animate-cat-cheer-right {
+    animation: cat-cheer-right 0.52s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: left center;
+  }
+
+  .animate-cat-tail {
+    animation: cat-tail 0.64s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: left bottom;
+  }
+
+  .animate-cat-foot-left {
+    animation: cat-foot-left 0.78s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-cat-foot-right {
+    animation: cat-foot-right 0.78s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-confetti-float {
+    animation: confetti-float 1.35s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-confetti-float-delayed {
+    animation: confetti-float 1.35s ease-in-out 0.45s infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-mini-bob {
+    animation: mini-bob 0.48s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center bottom;
+  }
+
+  .animate-mini-walk-leg-a {
+    animation: mini-walk-leg-a 0.48s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center top;
+  }
+
+  .animate-mini-walk-leg-b {
+    animation: mini-walk-leg-b 0.48s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center top;
+  }
+
+  .animate-mini-sweat {
+    animation: mini-sweat-drop 1.1s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-mini-flail-left {
+    animation: mini-flail-left 0.22s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: right top;
+  }
+
+  .animate-mini-flail-right {
+    animation: mini-flail-right 0.22s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: left top;
+  }
+
+  .animate-mini-kick-a {
+    animation: mini-kick-a 0.2s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center top;
+  }
+
+  .animate-mini-kick-b {
+    animation: mini-kick-b 0.2s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center top;
+  }
+
+  .animate-table-steam {
+    animation: table-steam 1.8s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center bottom;
+  }
+
+  .animate-table-steam-delayed {
+    animation: table-steam 1.8s ease-in-out 0.9s infinite;
+    transform-box: fill-box;
+    transform-origin: center bottom;
+  }
+
+  .animate-guest-wave {
+    animation: guest-wave 0.55s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: left bottom;
+  }
+
+@keyframes mini-chew {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.45);
+  }
+}
+
+@keyframes mini-bite {
+  0%,
+  62%,
+  100% {
+    transform: rotate(0deg);
+  }
+  72%,
+  82% {
+    transform: rotate(-32deg);
+  }
+}
+
+@keyframes mini-land {
+  0% {
+    transform: scale(1.12, 0.84);
+  }
+  55% {
+    transform: scale(0.96, 1.05);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes mini-hair-sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes mini-dizzy {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes mini-bubble-pop {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}
+
+@keyframes guest-wave-soft {
+  0%,
+  70%,
+  100% {
+    transform: rotate(0deg);
+  }
+  78%,
+  92% {
+    transform: rotate(-14deg);
+  }
+  85% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes cat-munch {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.04, 0.96);
+  }
+  50% {
+    transform: translateY(-5px) scale(0.97, 1.04);
+  }
+}
+
+  .animate-mini-chew {
+    animation: mini-chew 0.42s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-mini-bite {
+    animation: mini-bite 2.6s ease-in-out infinite;
+    transform-box: view-box;
+    transform-origin: 51px 57px;
+  }
+
+  .animate-mini-land {
+    animation: mini-land 0.36s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+    transform-origin: center bottom;
+  }
+
+  .animate-mini-hair {
+    animation: mini-hair-sway 0.48s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center top;
+  }
+
+  .animate-mini-dizzy {
+    animation: mini-dizzy 0.9s linear infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .mini-bubble {
+    animation: mini-bubble-pop 0.18s ease-out;
+  }
+
+  .animate-guest-wave-soft {
+    animation: guest-wave-soft 4.2s ease-in-out infinite;
+    transform-box: view-box;
+    transform-origin: 51px 57px;
+  }
+
+@keyframes blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes cat-big-jump {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.08, 0.92);
+  }
+  18% {
+    transform: translateY(2px) scale(1.14, 0.84);
+  }
+  45% {
+    transform: translateY(-36px) rotate(-6deg) scale(0.94, 1.08);
+  }
+  62% {
+    transform: translateY(-30px) rotate(6deg) scale(0.96, 1.05);
+  }
+  85% {
+    transform: translateY(0) scale(1.12, 0.88);
+  }
+}
+
+@keyframes cat-shake-left {
+  0%,
+  100% {
+    transform: rotate(-30deg) translateY(-6px);
+  }
+  50% {
+    transform: rotate(8deg) translateY(-12px);
+  }
+}
+
+@keyframes cat-shake-right {
+  0%,
+  100% {
+    transform: rotate(30deg) translateY(-6px);
+  }
+  50% {
+    transform: rotate(-8deg) translateY(-12px);
+  }
+}
+
+@keyframes cat-star-spin {
+  0%,
+  100% {
+    transform: rotate(-12deg) scale(1);
+  }
+  50% {
+    transform: rotate(12deg) scale(1.12);
+  }
+}
+
+.animate-blink {
+  animation: blink 3.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.animate-cat-big-jump {
+  animation: cat-big-jump 0.86s cubic-bezier(0.34, 1.3, 0.64, 1) infinite;
   transform-box: fill-box;
   transform-origin: center bottom;
 }
 
-.animate-cat-cheer-left {
-  animation: cat-cheer-left 0.46s ease-in-out infinite;
+.animate-cat-shake-left {
+  animation: cat-shake-left 0.18s ease-in-out infinite;
   transform-box: fill-box;
-  transform-origin: right center;
+  transform-origin: right bottom;
 }
 
-.animate-cat-cheer-right {
-  animation: cat-cheer-right 0.46s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: left center;
-}
-
-.animate-cat-tail {
-  animation: cat-tail 0.55s ease-in-out infinite;
+.animate-cat-shake-right {
+  animation: cat-shake-right 0.18s ease-in-out infinite;
   transform-box: fill-box;
   transform-origin: left bottom;
 }
 
-.animate-cat-feet {
-  animation: cat-feet-kick 0.68s ease-in-out infinite;
+.animate-cat-star-spin {
+  animation: cat-star-spin 0.9s ease-in-out infinite;
   transform-box: fill-box;
   transform-origin: center;
 }
 
-.animate-confetti-float {
-  animation: confetti-float 1.2s ease-in-out infinite;
+[popover]:has(> [focusgroup~="menu"]) {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+
+[popover]:is(:popover-open, .\:popover-open) {
+  display: block;
+}
+
+@supports (position-area: block-end) {
+  [popover]:has(> [focusgroup~="menu"]) {
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    inset: auto;
+    margin-block: 0.5rem;
+    margin-inline: 0;
+  }
+}
+
+@supports not (position-area: block-end) {
+  [popover]:has(> [focusgroup~="menu"]) {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [popover]:has(> [focusgroup~="menu"]) {
+    opacity: 0;
+    translate: 0 -0.25rem;
+    transition: opacity, translate, display, overlay;
+    transition-duration: 0.15s;
+    transition-behavior: allow-discrete;
+  }
+
+  [popover]:has(> [focusgroup~="menu"]):is(:popover-open, .\:popover-open) {
+    opacity: 1;
+    translate: 0 0;
+    transition-duration: 0.1s;
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 -0.25rem;
+    }
+  }
+}
+
+.animate-cat-munch {
+  animation: cat-munch 0.36s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+@keyframes cat-scoop {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  45%,
+  55% {
+    transform: translate(-20px, -30px) rotate(-18deg);
+  }
+}
+
+@keyframes cat-morsel {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  48%,
+  90% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes cat-chomp {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.3);
+  }
+}
+
+@keyframes cat-cheek-puff {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+@keyframes cat-food-shrink {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0.15);
+  }
+}
+
+@keyframes cat-crumbs {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(22px);
+    opacity: 0;
+  }
+}
+
+.animate-cat-scoop {
+  animation: cat-scoop 0.7s ease-in-out infinite;
   transform-box: fill-box;
   transform-origin: center;
 }
 
+.animate-cat-morsel {
+  animation: cat-morsel 0.7s linear infinite;
+}
 
+.animate-cat-chomp {
+  animation: cat-chomp 0.35s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
 
+.animate-cat-cheek-puff {
+  animation: cat-cheek-puff 0.35s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.animate-cat-food-shrink {
+  animation: cat-food-shrink 3.4s ease-in forwards;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.animate-cat-crumbs {
+  animation: cat-crumbs 0.7s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.animate-cat-crumbs-delayed {
+  animation: cat-crumbs 0.7s ease-out 0.35s infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* ---- Cat crash landing ---- */
+
+@keyframes scene-jolt {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-14px) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(0) rotate(2deg);
+  }
+  70% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes cat-thud {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.3) rotate(-14deg);
+  }
+  25% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.35) rotate(-8deg);
+  }
+  45% {
+    transform: translateX(-50%) scale(1) rotate(-8deg);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-16px) scale(1) rotate(-8deg);
+  }
+}
+
+@keyframes cat-dust-left {
+  0% {
+    opacity: 0.95;
+    transform: translate(0, 0) scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-70px, -26px) scale(1.7);
+  }
+}
+
+@keyframes cat-dust-right {
+  0% {
+    opacity: 0.95;
+    transform: translate(0, 0) scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(70px, -26px) scale(1.7);
+  }
+}
+
+.animate-scene-jolt {
+  animation: scene-jolt 0.6s cubic-bezier(0.34, 1.45, 0.64, 1);
+  transform-origin: center bottom;
+}
+
+.cat-thud {
+  animation: cat-thud 0.9s ease-out forwards;
+}
+
+.cat-dust-left {
+  animation: cat-dust-left 0.8s ease-out both;
+}
+
+.cat-dust-right {
+  animation: cat-dust-right 0.8s ease-out both;
+}
+
+/* ---- Nervous Mini (steps 1 to 3) ---- */
+
+@keyframes mini-tremble {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-0.7px);
+  }
+  75% {
+    transform: translateX(0.7px);
+  }
+}
+
+@keyframes mini-stress {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes mini-wring {
+  0%,
+  100% {
+    transform: rotate(-4deg) translateY(0);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-0.8px);
+  }
+}
+
+@keyframes mini-nail-bite {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.9px);
+  }
+}
+
+.animate-mini-tremble {
+  animation: mini-tremble 0.11s linear infinite;
+}
+
+.animate-mini-stress {
+  animation: mini-stress 0.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: right center;
+}
+
+.animate-mini-wring {
+  animation: mini-wring 0.3s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.animate-mini-nail-bite {
+  animation: mini-nail-bite 0.16s linear infinite;
+}
+
+.animate-mini-sweat-delayed {
+  animation: mini-sweat-drop 1.1s ease-in-out 0.55s infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}

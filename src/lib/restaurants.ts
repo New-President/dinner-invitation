@@ -34,7 +34,7 @@ export interface Restaurant {
   readonly region: RegionId;
   readonly name: string;
   readonly chineseName?: string;
-  readonly ziRenWantsToTry?: boolean;
+  readonly hostWantsToTry?: boolean;
   readonly areaName: string;
   readonly googleCategory: string;
   readonly openStatusText: string;
@@ -203,7 +203,7 @@ export const RESTAURANTS: readonly Restaurant[] = [
     region: 'west',
     name: 'Original Sin',
     chineseName: '原味地中海',
-    ziRenWantsToTry: true,
+    hostWantsToTry: true,
     areaName: 'Holland Village · Chip Bee',
     googleCategory: 'Vegetarian restaurant',
     openStatusText: 'Opens 11:30 am',

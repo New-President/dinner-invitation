@@ -620,6 +620,8 @@ describe('Mini companion state machine', () => {
     const roaming = createInitialCompanionState('comment', desktop);
     const toTable = syncCompanionStep(roaming, 'thank-you', desktop);
     assert.equal(toTable.phase.kind, 'walking-to-table');
+    assert.equal(toTable.x, 8);
+    assert.equal(toTable.facing, 'right');
     assert.equal(deriveMiniExpression(toTable.phase), 'happy-walk');
 
     const { seatX } = computeTableLayout(desktop);

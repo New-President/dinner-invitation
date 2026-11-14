@@ -45,6 +45,7 @@ export interface AddToCalendarMenuProps {
   readonly restaurant: Restaurant;
   readonly comment: string;
   readonly guestName?: string;
+  readonly className?: string;
 }
 
 function CalendarProviderBadge({
@@ -295,6 +296,7 @@ export function AddToCalendarMenu({
   restaurant,
   comment,
   guestName,
+  className,
 }: AddToCalendarMenuProps) {
   const reactId = useId();
   const triggerId = `${reactId}-calendar-trigger`;
@@ -633,7 +635,7 @@ export function AddToCalendarMenu({
         onPointerDown={handleTriggerPointerDown}
         onKeyDown={handleTriggerKeyDown}
         onClick={handleTriggerClick}
-        className="inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-full bg-amber-400 hover:bg-amber-300 aria-expanded:bg-amber-300 aria-expanded:ring-2 aria-expanded:ring-amber-200/80 text-[#231728] font-extrabold px-2.5 sm:px-3.5 py-2 leading-none whitespace-nowrap transition-colors cursor-pointer shadow-md shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#18121a]"
+        className={`inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-full bg-amber-400 hover:bg-amber-300 aria-expanded:bg-amber-300 aria-expanded:ring-2 aria-expanded:ring-amber-200/80 text-[#231728] font-extrabold px-2.5 sm:px-3.5 py-2 leading-none whitespace-nowrap transition-colors cursor-pointer shadow-md shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#18121a]${className ? ` ${className}` : ''}`}
       >
         <CalendarPlus className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" aria-hidden="true" />
         <span className="text-[11px] sm:text-xs leading-4">Add to Calendar</span>

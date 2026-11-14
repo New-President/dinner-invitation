@@ -190,7 +190,7 @@ export function createInitialCompanionState(
 ): CompanionState {
   const floorY = computeFloorY(viewport);
   const start = clampCompanionPosition(
-    Math.round(viewport.width * 0.2),
+    step === 'thank-you' ? 8 : Math.round(viewport.width * 0.2),
     floorY,
     viewport
   );
@@ -292,6 +292,7 @@ export function syncCompanionStep(
 
   if (nextStep === 'thank-you') {
     const { seatX } = computeTableLayout(viewport);
+    const startX = clampCompanionPosition(8, floorY, viewport).x;
     if (state.paused) {
       return {
         ...state,
@@ -304,8 +305,9 @@ export function syncCompanionStep(
     }
     return {
       ...state,
+      x: startX,
       y: floorY,
-      facing: seatX >= state.x ? 'right' : 'left',
+      facing: seatX >= startX ? 'right' : 'left',
       step: nextStep,
       phase: { kind: 'walking-to-table', seatX },
     };

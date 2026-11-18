@@ -209,20 +209,21 @@ export function AdminPanel({ initialCatalog, store, placesReady }: AdminPanelPro
   };
 
   return (
-    <main className="min-h-dvh bg-gradient-to-br from-[var(--page-from)] via-[var(--page-via)] to-[var(--page-to)] text-white">
+    <main className="admin-panel min-h-dvh bg-gradient-to-br from-[var(--page-from)] via-[var(--page-via)] to-[var(--page-to)] text-white">
       {/* Sticky toolbar */}
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[var(--page-bg)]/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="min-w-0">
             <h1 className="text-lg sm:text-xl font-extrabold tracking-tight">Restaurant Admin</h1>
             <p className="text-[11px] sm:text-xs text-rose-200/80">{store.description}</p>
           </div>
-          <div className="flex items-center gap-2">
+          {/* One row on every screen: small secondary buttons, Save fills the rest on phones. */}
+          <div className="flex items-center gap-2 sm:shrink-0">
             <a
               href="/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3.5 py-2 text-xs font-bold text-rose-100 hover:bg-white/15"
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3.5 text-xs font-bold text-rose-100 hover:bg-white/15"
             >
               View site <ExternalLink className="h-3.5 w-3.5" />
             </a>
@@ -230,7 +231,7 @@ export function AdminPanel({ initialCatalog, store, placesReady }: AdminPanelPro
               <button
                 type="button"
                 onClick={discard}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3.5 py-2 text-xs font-bold text-rose-100 hover:bg-white/15 cursor-pointer"
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3.5 text-xs font-bold text-rose-100 hover:bg-white/15 cursor-pointer"
               >
                 <Undo2 className="h-3.5 w-3.5" /> Discard
               </button>
@@ -239,9 +240,9 @@ export function AdminPanel({ initialCatalog, store, placesReady }: AdminPanelPro
               type="button"
               onClick={save}
               disabled={!dirty || saving || !store.writable}
-              className="btn-primary inline-flex items-center gap-2 px-5 py-2 text-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+              className="btn-primary inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap px-5 text-sm sm:flex-none disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Save className="h-4 w-4 shrink-0" />}
               {saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
             </button>
           </div>

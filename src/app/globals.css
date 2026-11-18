@@ -154,10 +154,12 @@ body {
   white-space: nowrap;
 }
 
+/* 16px+ form text stops iOS zooming on focus. The admin page sizes its own
+   buttons (this unlayered rule would otherwise override their text-* classes). */
 input,
 textarea,
-button,
-select {
+select,
+button:not(.admin-panel *) {
   font: inherit;
   font-size: max(1rem, 1em);
 }
@@ -165,7 +167,6 @@ select {
 .touch-target {
   min-height: 48px;
 }
-
 .mini-drag-handle {
   cursor: grab;
   touch-action: none;

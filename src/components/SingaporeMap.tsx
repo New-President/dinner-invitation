@@ -7,6 +7,8 @@ interface SingaporeMapProps {
   readonly selectedRegion?: RegionId;
   readonly onEnterRegion: (region: RegionId) => void;
   readonly headingRef?: React.RefObject<HTMLHeadingElement | null>;
+  /** How many restaurants each region currently has (set from /admin). */
+  readonly restaurantCounts: Readonly<Record<RegionId, number>>;
 }
 
 const REGION_SVG_PATHS: Readonly<
@@ -26,52 +28,53 @@ const REGION_SVG_PATHS: Readonly<
     labelPos: { x: 210, y: 240 },
     fillActive: 'url(#grad-west-active)',
     fillIdle: 'url(#grad-west-idle)',
-    stroke: '#f43f5e',
+    stroke: 'var(--map-west)',
   },
   north: {
     path: 'M 255 135 L 330 82 L 430 68 L 520 92 L 548 148 L 490 185 L 390 185 L 315 165 Z',
     labelPos: { x: 415, y: 128 },
     fillActive: 'url(#grad-north-active)',
     fillIdle: 'url(#grad-north-idle)',
-    stroke: '#8b5cf6',
+    stroke: 'var(--map-north)',
   },
   central: {
     path: 'M 315 165 L 390 185 L 490 185 L 515 245 L 485 310 L 425 322 L 355 305 L 315 305 L 332 230 Z',
     labelPos: { x: 418, y: 248 },
     fillActive: 'url(#grad-central-active)',
     fillIdle: 'url(#grad-central-idle)',
-    stroke: '#ec4899',
+    stroke: 'var(--map-central)',
   },
   east: {
     path: 'M 548 148 L 625 142 L 718 175 L 758 225 L 725 280 L 620 298 L 485 310 L 515 245 L 490 185 Z',
     labelPos: { x: 618, y: 228 },
     fillActive: 'url(#grad-east-active)',
     fillIdle: 'url(#grad-east-idle)',
-    stroke: '#d946ef',
+    stroke: 'var(--map-east)',
   },
   south: {
     path: 'M 250 328 L 315 305 L 355 305 L 425 322 L 485 310 L 472 378 L 385 398 L 278 382 Z',
     labelPos: { x: 375, y: 338 },
     fillActive: 'url(#grad-south-active)',
     fillIdle: 'url(#grad-south-idle)',
-    stroke: '#e11d48',
+    stroke: 'var(--map-south)',
   },
 };
 
 export function SingaporeMap({
   onEnterRegion,
   headingRef,
+  restaurantCounts,
 }: SingaporeMapProps) {
   const [hoveredRegion, setHoveredRegion] = useState<RegionId | null>(null);
   const hoveredMeta = hoveredRegion ? REGIONS[hoveredRegion] : null;
 
   return (
-    <div className="h-dvh w-full overflow-hidden p-3.5 sm:p-6 flex flex-col justify-between gap-2 bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] text-white select-none">
+    <div className="h-dvh w-full overflow-hidden p-3.5 sm:p-6 flex flex-col justify-between gap-2 bg-gradient-to-br from-[var(--page-from)] via-[var(--page-via)] to-[var(--page-to)] text-white select-none">
       {/* Top Map Status Bar */}
       <div className="relative z-10 flex items-center justify-between gap-3 pb-2.5 sm:pb-3 border-b border-white/10 shrink-0">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-rose-400 shadow-[0_0_12px_#fb7185] shrink-0" />
+            <span className="inline-flex h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-rose-400 shadow-[0_0_12px_var(--color-rose-400)] shrink-0" />
             <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider sm:tracking-widest text-rose-200/90">
               SINGAPORE VEGETARIAN DINNER INVITATION · HOSTED BY YONG ZI REN
             </span>
@@ -105,45 +108,45 @@ export function SingaporeMap({
         >
           <defs>
             <linearGradient id="grad-west-active" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.92" />
-              <stop offset="100%" stopColor="#be123c" stopOpacity="0.96" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-west-a)' }} stopOpacity="0.92" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-west-b)' }} stopOpacity="0.96" />
             </linearGradient>
             <linearGradient id="grad-north-active" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.92" />
-              <stop offset="100%" stopColor="#6d28d9" stopOpacity="0.96" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-north-a)' }} stopOpacity="0.92" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-north-b)' }} stopOpacity="0.96" />
             </linearGradient>
             <linearGradient id="grad-central-active" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#ec4899" stopOpacity="0.92" />
-              <stop offset="100%" stopColor="#be185d" stopOpacity="0.96" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-central-a)' }} stopOpacity="0.92" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-central-b)' }} stopOpacity="0.96" />
             </linearGradient>
             <linearGradient id="grad-east-active" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#e879f9" stopOpacity="0.92" />
-              <stop offset="100%" stopColor="#a21caf" stopOpacity="0.96" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-east-a)' }} stopOpacity="0.92" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-east-b)' }} stopOpacity="0.96" />
             </linearGradient>
             <linearGradient id="grad-south-active" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#fb7185" stopOpacity="0.92" />
-              <stop offset="100%" stopColor="#e11d48" stopOpacity="0.96" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-south-a)' }} stopOpacity="0.92" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-south-b)' }} stopOpacity="0.96" />
             </linearGradient>
 
             <linearGradient id="grad-west-idle" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#3b2535" stopOpacity="0.84" />
-              <stop offset="100%" stopColor="#2a1a26" stopOpacity="0.9" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-west-idle-a)' }} stopOpacity="0.84" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-west-idle-b)' }} stopOpacity="0.9" />
             </linearGradient>
             <linearGradient id="grad-north-idle" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#332640" stopOpacity="0.84" />
-              <stop offset="100%" stopColor="#241b30" stopOpacity="0.9" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-north-idle-a)' }} stopOpacity="0.84" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-north-idle-b)' }} stopOpacity="0.9" />
             </linearGradient>
             <linearGradient id="grad-central-idle" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#42263a" stopOpacity="0.86" />
-              <stop offset="100%" stopColor="#2e1a29" stopOpacity="0.92" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-central-idle-a)' }} stopOpacity="0.86" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-central-idle-b)' }} stopOpacity="0.92" />
             </linearGradient>
             <linearGradient id="grad-east-idle" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#3d243f" stopOpacity="0.84" />
-              <stop offset="100%" stopColor="#29182b" stopOpacity="0.9" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-east-idle-a)' }} stopOpacity="0.84" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-east-idle-b)' }} stopOpacity="0.9" />
             </linearGradient>
             <linearGradient id="grad-south-idle" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#472333" stopOpacity="0.86" />
-              <stop offset="100%" stopColor="#311723" stopOpacity="0.92" />
+              <stop offset="0%" style={{ stopColor: 'var(--map-south-idle-a)' }} stopOpacity="0.86" />
+              <stop offset="100%" style={{ stopColor: 'var(--map-south-idle-b)' }} stopOpacity="0.92" />
             </linearGradient>
 
             <pattern id="sg-grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -164,7 +167,7 @@ export function SingaporeMap({
             x="410"
             y="38"
             textAnchor="middle"
-            fill="rgba(244, 114, 182, 0.35)"
+            style={{ fill: 'var(--map-label)' }}
             fontSize="11"
             fontWeight="600"
             letterSpacing="3"
@@ -175,7 +178,7 @@ export function SingaporeMap({
             x="570"
             y="398"
             textAnchor="middle"
-            fill="rgba(244, 114, 182, 0.35)"
+            style={{ fill: 'var(--map-label)' }}
             fontSize="11"
             fontWeight="600"
             letterSpacing="3"
@@ -186,8 +189,7 @@ export function SingaporeMap({
           {/* Pulau Ubin */}
           <path
             d="M 615 110 L 655 104 L 668 118 L 635 125 Z"
-            fill="#2d1e2f"
-            stroke="rgba(236,72,153,0.3)"
+            style={{ fill: 'var(--map-island)', stroke: 'var(--map-island-edge)' }}
             strokeWidth="1.2"
           />
           <text x="642" y="98" textAnchor="middle" fill="rgba(255,255,255,0.35)" fontSize="9">
@@ -197,15 +199,17 @@ export function SingaporeMap({
           {/* Sentosa Island */}
           <path
             d="M 358 403 L 408 399 L 418 412 L 368 415 Z"
-            fill={hoveredRegion === 'south' ? '#fb7185' : '#3b2231'}
-            stroke="#fb7185"
+            style={{
+              fill: hoveredRegion === 'south' ? 'var(--map-south-a)' : 'var(--map-south-idle-a)',
+              stroke: 'var(--map-south-a)',
+            }}
             strokeWidth="1.4"
             className="cursor-pointer transition-colors"
             onMouseEnter={() => setHoveredRegion('south')}
             onMouseLeave={() => setHoveredRegion(null)}
             onClick={() => onEnterRegion('south')}
           />
-          <text x="390" y="426" textAnchor="middle" fill="rgba(253, 164, 175, 0.7)" fontSize="9.5">
+          <text x="390" y="426" textAnchor="middle" style={{ fill: 'var(--map-label-strong)' }} fontSize="9.5">
             Sentosa
           </text>
 
@@ -237,7 +241,7 @@ export function SingaporeMap({
                 <path
                   d={shape.path}
                   fill={isHighlighted ? shape.fillActive : shape.fillIdle}
-                  stroke={isHighlighted ? '#ffffff' : shape.stroke}
+                  style={{ stroke: isHighlighted ? '#ffffff' : shape.stroke }}
                   strokeWidth={isHighlighted ? 3.2 : 1.8}
                   strokeLinejoin="round"
                   className="transition-all duration-300"
@@ -262,8 +266,10 @@ export function SingaporeMap({
                     cx="0"
                     cy="0"
                     r={isHighlighted ? 15 : 11}
-                    fill={isHighlighted ? '#ffffff' : shape.stroke}
-                    stroke={isHighlighted ? shape.stroke : '#ffffff'}
+                    style={{
+                      fill: isHighlighted ? '#ffffff' : shape.stroke,
+                      stroke: isHighlighted ? shape.stroke : '#ffffff',
+                    }}
                     strokeWidth="2.5"
                   />
                   <text
@@ -271,7 +277,7 @@ export function SingaporeMap({
                     y="4"
                     textAnchor="middle"
                     fontSize={isHighlighted ? '13' : '10'}
-                    fill={isHighlighted ? shape.stroke : '#ffffff'}
+                    style={{ fill: isHighlighted ? shape.stroke : '#ffffff' }}
                     fontWeight="800"
                   >
                     ★
@@ -353,7 +359,7 @@ export function SingaporeMap({
                   fontWeight="500"
                   className="pointer-events-none"
                 >
-                  3 Veg Spots
+                  {restaurantCounts[regionId]} Veg Spot{restaurantCounts[regionId] === 1 ? '' : 's'}
                 </text>
               </g>
             );
@@ -460,12 +466,12 @@ export function SingaporeMap({
               </div>
 
               <div className="hidden xl:block text-xs sm:text-sm font-semibold text-rose-200/90 shrink-0 whitespace-nowrap">
-                Tap or click to view 3 vegetarian restaurants →
+                Tap or click to view {restaurantCounts[hoveredRegion]} vegetarian restaurant{restaurantCounts[hoveredRegion] === 1 ? '' : 's'} →
               </div>
             </>
           ) : (
             <div className="w-full flex items-center justify-center text-xs sm:text-sm font-medium text-rose-100/90 text-center">
-              Tap or hover over North, South, East, West, or Central on the Singapore map to view 3 vegetarian restaurants
+              Tap or hover over North, South, East, West, or Central on the Singapore map to view its vegetarian restaurants
             </div>
           )}
         </div>

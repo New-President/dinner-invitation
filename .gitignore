@@ -7,3 +7,5 @@ build
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+# Restaurant edits saved by /admin during local development
+.data

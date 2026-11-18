@@ -1,17 +1,22 @@
 import { describe, it } from 'node:test';
+
+// Use the built-in catalog, never a locally saved .data/restaurants.json.
+process.env.RESTAURANT_STORE = 'seed';
 import assert from 'node:assert/strict';
 import {
   REGIONS,
   REGION_ORDER,
-  RESTAURANTS,
+  SEED_RESTAURANTS,
   getRestaurantsByRegion,
   findRestaurantById,
   getLiveOpeningStatus,
 } from '../src/lib/restaurants';
 import { parseInviteSubmission } from '../src/lib/validation';
 import {
+  NO_COMMENT_TEXT,
   RECIPIENT_EMAIL,
   buildInvitationEmailContent,
+  commentForHost,
 } from '../src/lib/email-template';
 import {
   DINNER_SCHEDULE,
@@ -26,8 +31,16 @@ import {
   MINI_WIDTH,
   clampCompanionPosition,
   computeFloorY,
+  computeGuestSeat,
   computeTableLayout,
   createInitialCompanionState,
+  createSeatedGuest,
+  grabGuest,
+  moveGuest,
+  nudgeGuest,
+  releaseGuest,
+  stepGuestTick,
+  type GuestState,
   deriveMiniExpression,
   describeHorizontalZone,
   endCompanionDrag,
@@ -54,10 +67,10 @@ describe('Singapore Vegetarian Restaurant Domain Catalog', () => {
   });
 
   it('provides exactly 3 vegetarian restaurants per region (15 total) with distinct cuisines and clean Google Maps embed URLs', () => {
-    assert.equal(RESTAURANTS.length, 15, '15 total vegetarian restaurants');
+    assert.equal(SEED_RESTAURANTS.length, 15, '15 total vegetarian restaurants');
 
     for (const regionId of REGION_ORDER) {
-      const regional = getRestaurantsByRegion(regionId);
+      const regional = getRestaurantsByRegion(SEED_RESTAURANTS, regionId);
       assert.equal(regional.length, 3, `${regionId} has 3 restaurants`);
 
       const cuisines = new Set(regional.map((r) => r.cuisine));
@@ -86,12 +99,16 @@ describe('Singapore Vegetarian Restaurant Domain Catalog', () => {
         assert.ok(rest.openStatusText.length > 0, `${rest.name} has openStatusText`);
         assert.ok(rest.popularTimesPeak.length > 0, `${rest.name} has popularTimesPeak`);
         assert.ok(rest.highlights.length >= 3, `${rest.name} has menu highlights`);
-        assert.ok(rest.reviews.length >= 2, `${rest.name} has diner reviews`);
+        // Reviews aren't shown on the site and may be empty rather than invented.
+        for (const review of rest.reviews) {
+          assert.ok(review.author.length > 0 && review.text.length > 0, `${rest.name} review is complete`);
+        }
         assert.ok(rest.photos.length >= 4, `${rest.name} has at least 4 live Google Maps photos`);
         for (const photo of rest.photos) {
+          // Google's photo CDN; the card falls back to a placeholder if a link stops loading.
           assert.ok(
-            photo.url.startsWith('https://lh3.googleusercontent.com/grass-cs/'),
-            `${rest.name} photo uses official Google Maps CDN`
+            /^https:\/\/lh3\.googleusercontent\.com\/(grass-cs|gps-cs-s|proxy)\//.test(photo.url),
+            `${rest.name} photo uses the Google Maps photo CDN`
           );
         }
       }
@@ -99,7 +116,7 @@ describe('Singapore Vegetarian Restaurant Domain Catalog', () => {
   });
 
   it("includes D'life Bistro & Cafe in West Singapore matching the reference Place card", () => {
-    const dlife = findRestaurantById('dlife-bistro-cafe');
+    const dlife = findRestaurantById(SEED_RESTAURANTS, 'dlife-bistro-cafe');
     assert.ok(dlife, "D'life Bistro & Cafe exists in catalog");
     assert.equal(dlife.region, 'west');
     assert.equal(dlife.address, '6 Chun Tin Rd, Singapore 599593');
@@ -148,7 +165,7 @@ describe('Boundary Validation & Email Payload Builder', () => {
       restaurantId: 'dlife-bistro-cafe',
       comment: 'Excited to try the Crispy Yam Ring!',
       guestName: 'Alex',
-    });
+    }, SEED_RESTAURANTS);
 
     assert.equal(result.ok, true);
     if (result.ok) {
@@ -164,7 +181,7 @@ describe('Boundary Validation & Email Payload Builder', () => {
       region: 'east',
       restaurantId: 'dlife-bistro-cafe',
       comment: 'Hello!',
-    });
+    }, SEED_RESTAURANTS);
 
     assert.equal(result.ok, false);
     if (!result.ok) {
@@ -177,15 +194,30 @@ describe('Boundary Validation & Email Payload Builder', () => {
       region: 'sentosa-only',
       restaurantId: 'dlife-bistro-cafe',
       comment: 'Hi',
-    });
+    }, SEED_RESTAURANTS);
     assert.equal(badRegion.ok, false);
 
     const hugeComment = parseInviteSubmission({
       region: 'west',
       restaurantId: 'dlife-bistro-cafe',
       comment: 'x'.repeat(2005),
-    });
+    }, SEED_RESTAURANTS);
     assert.equal(hugeComment.ok, false);
+  });
+
+  it('accepts a blank or missing comment and keeps it empty instead of inventing one', () => {
+    for (const comment of ['', '   ', undefined]) {
+      const result = parseInviteSubmission({ region: 'west', restaurantId: 'dlife-bistro-cafe', comment }, SEED_RESTAURANTS);
+      assert.equal(result.ok, true);
+      if (!result.ok) continue;
+      assert.equal(result.value.comment, '');
+      const email = buildInvitationEmailContent(result.value, 'Sun, 15 Nov 2026 at 8:00 pm');
+      assert.ok(email.text.includes(NO_COMMENT_TEXT));
+      assert.ok(!email.text.includes('""'));
+      assert.match(email.html, /No message left/);
+    }
+    assert.equal(commentForHost('  '), NO_COMMENT_TEXT);
+    assert.equal(commentForHost(' Hi! '), 'Hi!');
   });
 
   it('builds celebratory HTML and plain-text email for the host addressed to RECIPIENT_EMAIL', () => {
@@ -194,7 +226,7 @@ describe('Boundary Validation & Email Payload Builder', () => {
       region: 'central',
       restaurantId: 'whole-earth-tanjong-pagar',
       comment: 'Let us try the Penang Rendang & Olive Rice!',
-    });
+    }, SEED_RESTAURANTS);
     assert.equal(parsed.ok, true);
     if (parsed.ok) {
       const email = buildInvitationEmailContent(
@@ -215,7 +247,7 @@ describe('Boundary Validation & Email Payload Builder', () => {
       restaurantId: 'dlife-bistro-cafe',
       comment: 'See you there!',
       guestName: 'Alex',
-    });
+    }, SEED_RESTAURANTS);
     assert.equal(parsed.ok, true);
     if (!parsed.ok) return;
 
@@ -255,7 +287,7 @@ describe('Multi-Platform Calendar Targets & RFC 5545 ICS Serializer', () => {
     assert.equal(DINNER_SCHEDULE.timeLabel, '7:00 PM – 9:00 PM SGT');
     assert.equal(DINNER_SCHEDULE.timeZone, 'Asia/Singapore');
 
-    const restaurant = findRestaurantById('dlife-bistro-cafe');
+    const restaurant = findRestaurantById(SEED_RESTAURANTS, 'dlife-bistro-cafe');
     assert.ok(restaurant, "D'life Bistro & Cafe exists");
 
     const targets = buildCalendarTargets({
@@ -349,7 +381,7 @@ describe('Multi-Platform Calendar Targets & RFC 5545 ICS Serializer', () => {
   });
 
   it('serializes RFC 5545 ICS with Asia/Singapore VTIMEZONE, escaping, and <= 75 UTF-8 byte line folding across multi-byte CJK characters', () => {
-    const baseRestaurant = findRestaurantById('dlife-bistro-cafe');
+    const baseRestaurant = findRestaurantById(SEED_RESTAURANTS, 'dlife-bistro-cafe');
     assert.ok(baseRestaurant);
 
     const cjkRestaurant = {
@@ -436,10 +468,10 @@ describe('Multi-Platform Calendar Targets & RFC 5545 ICS Serializer', () => {
     assert.equal(fallbackRes.status, 200);
     assert.equal(
       fallbackRes.headers.get('content-disposition'),
-      `inline; filename="dinner-${RESTAURANTS[0].id}.ics"`
+      `inline; filename="dinner-${SEED_RESTAURANTS[0].id}.ics"`
     );
     const fallbackBody = (await fallbackRes.text()).replace(/\r\n /g, '');
-    assert.ok(fallbackBody.includes(RESTAURANTS[0].name));
+    assert.ok(fallbackBody.includes(SEED_RESTAURANTS[0].name));
   });
 });
 
@@ -653,5 +685,62 @@ describe('Mini companion state machine', () => {
     assert.equal(next.phase.kind, 'walking-to-table');
   });
 
+  function runGuestTicks(
+    state: GuestState,
+    viewport: CompanionViewport,
+    totalMs: number,
+    until: (s: GuestState) => boolean
+  ): GuestState {
+    let current = state;
+    for (let elapsed = 0; elapsed < totalMs && !until(current); elapsed += 16) {
+      current = stepGuestTick(current, 16, viewport);
+    }
+    return current;
+  }
+
+  it('seats the guest on the right chair, clear of Mini and inside the viewport', () => {
+    for (const viewport of [mobile, desktop]) {
+      const guest = createSeatedGuest(viewport);
+      const seat = computeGuestSeat(viewport);
+      assert.equal(guest.phase.kind, 'seated');
+      assert.deepEqual({ x: guest.x, y: guest.y }, seat);
+      assert.equal(guest.y, computeFloorY(viewport));
+      assert.ok(guest.x + MINI_WIDTH <= viewport.width);
+      assert.ok(guest.x >= computeTableLayout(viewport).seatX + MINI_WIDTH, 'guest overlaps Mini');
+    }
+  });
+
+  it('lets the guest be dragged off her chair, falls, and walks back to sit down', () => {
+    const seated = createSeatedGuest(desktop);
+    const carried = moveGuest(grabGuest(seated, 10, 10), 300, 200, 16, desktop);
+    assert.equal(carried.phase.kind, 'held');
+    assert.deepEqual({ x: carried.x, y: carried.y }, { x: 290, y: 190 });
+    assert.equal(carried.facing, 'left');
+
+    const dropped = releaseGuest(carried, desktop);
+    assert.equal(dropped.phase.kind, 'falling');
+
+    const landed = runGuestTicks(dropped, desktop, 4000, (s) => s.phase.kind === 'landed');
+    assert.equal(landed.phase.kind, 'landed');
+    assert.equal(landed.y, computeFloorY(desktop));
+
+    const walking = runGuestTicks(landed, desktop, 2000, (s) => s.phase.kind === 'returning');
+    assert.equal(walking.phase.kind, 'returning');
+    assert.equal(walking.facing, 'right');
+
+    const reseated = runGuestTicks(walking, desktop, 20000, (s) => s.phase.kind === 'seated');
+    assert.equal(reseated.phase.kind, 'seated');
+    assert.deepEqual({ x: reseated.x, y: reseated.y }, computeGuestSeat(desktop));
+    assert.equal(reseated.facing, 'left');
+  });
+
+  it('moves the held guest with arrow keys and keeps her in the viewport', () => {
+    const seated = createSeatedGuest(mobile);
+    const nudged = nudgeGuest(seated, KEYBOARD_STEP_PX, -KEYBOARD_STEP_PX, mobile);
+    assert.equal(nudged.phase.kind, 'held');
+    assert.ok(nudged.x <= mobile.width - MINI_WIDTH - 8);
+    assert.equal(nudged.y, seated.y - KEYBOARD_STEP_PX);
+    assert.equal(releaseGuest(nudged, mobile).phase.kind, 'falling');
+  });
 });
 

@@ -2,15 +2,45 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Check,
+  ArrowRight,
   Clock,
   ExternalLink,
   Images,
   MapPin,
   Navigation,
   Phone,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { getLiveOpeningStatus, type Restaurant } from '@/lib/restaurants';
+
+/**
+ * A Google Maps photo that falls back to a tidy placeholder if the image host
+ * refuses to serve it, instead of showing the browser's broken-image alt text.
+ */
+function PhotoImage({ src, alt }: { readonly src: string; readonly alt: string }) {
+  const [failed, setFailed] = useState<boolean>(false);
+  if (failed || !src) {
+    return (
+      <span
+        role="img"
+        aria-label={alt}
+        className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2a2a2c] to-[#1a1a1b]"
+      >
+        <UtensilsCrossed aria-hidden="true" className="h-7 w-7 text-white/20" />
+      </span>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      referrerPolicy="no-referrer"
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+    />
+  );
+}
 
 interface GoogleMapsRestaurantCardProps {
   readonly restaurant: Restaurant;
@@ -36,7 +66,9 @@ export function GoogleMapsRestaurantCard({
 
   const liveStatus = getLiveOpeningStatus(restaurant.hours, now);
 
-  const photos = restaurant.photos;
+  // A restaurant added from /admin may have no photos yet; show placeholders.
+  const photos =
+    restaurant.photos.length > 0 ? restaurant.photos : [{ url: '', caption: restaurant.name }];
   const mainPhoto = photos[photoOffset % photos.length];
   const topSidePhoto = photos[(photoOffset + 1) % photos.length];
   const bottomSidePhoto = photos[(photoOffset + 2) % photos.length];
@@ -154,12 +186,10 @@ export function GoogleMapsRestaurantCard({
             title="Click to cycle live Google Maps photos"
             className="col-span-7 relative h-full w-full overflow-hidden group cursor-pointer text-left focus:outline-none"
           >
-            <img
+            <PhotoImage
+              key={mainPhoto.url}
               src={mainPhoto.url}
               alt={`${restaurant.name} — ${mainPhoto.caption}`}
-              referrerPolicy="no-referrer"
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
             <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between gap-1.5">
@@ -177,13 +207,11 @@ export function GoogleMapsRestaurantCard({
               title="Click to cycle live Google Maps photos"
               className="relative h-full w-full min-h-0 overflow-hidden group cursor-pointer focus:outline-none"
             >
-              <img
-                src={topSidePhoto.url}
-                alt={`${restaurant.name} — ${topSidePhoto.caption}`}
-                referrerPolicy="no-referrer"
-                loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
+              <PhotoImage
+              key={topSidePhoto.url}
+              src={topSidePhoto.url}
+              alt={`${restaurant.name} — ${topSidePhoto.caption}`}
+            />
             </button>
 
             <button
@@ -192,17 +220,17 @@ export function GoogleMapsRestaurantCard({
               title="Click to cycle live Google Maps photos"
               className="relative h-full w-full min-h-0 overflow-hidden group cursor-pointer focus:outline-none"
             >
-              <img
-                src={bottomSidePhoto.url}
-                alt={`${restaurant.name} — ${bottomSidePhoto.caption}`}
-                referrerPolicy="no-referrer"
-                loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
+              <PhotoImage
+              key={bottomSidePhoto.url}
+              src={bottomSidePhoto.url}
+              alt={`${restaurant.name} — ${bottomSidePhoto.caption}`}
+            />
               <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors" />
               <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-full bg-black/75 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold text-white border border-white/15">
                 <Images className="w-3 h-3 text-rose-300" />
-                <span>{photos.length} Photos</span>
+                <span>
+                  {restaurant.photos.length} Photo{restaurant.photos.length === 1 ? '' : 's'}
+                </span>
               </span>
             </button>
           </div>
@@ -331,17 +359,16 @@ export function GoogleMapsRestaurantCard({
         <button
           type="button"
           onClick={onPickRestaurant}
-          className={`touch-target w-full rounded-xl px-4 py-3 font-extrabold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            isGoldPick
-              ? 'bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:from-amber-300 hover:to-yellow-200 text-[#231728] shadow-lg shadow-amber-400/30'
-              : 'bg-gradient-to-r from-rose-600 via-pink-600 to-fuchsia-600 hover:from-rose-500 hover:to-pink-500 text-white shadow-lg shadow-rose-600/25'
-          }`}
+          aria-label={`Choose ${restaurant.name}${isGoldPick ? ', which Zi Ren wants to try' : ''}`}
+          className={`${isGoldPick ? 'btn-gold' : 'btn-primary'} group touch-target w-full px-5 py-3 text-sm inline-flex items-center justify-center gap-2 cursor-pointer`}
         >
-          <Check className="w-4 h-4 stroke-[2.5] shrink-0" />
           <span className="truncate">
-            Select {restaurant.name}
-            {isGoldPick ? ' · Zi Ren Wants To Try' : ''}
+            {isGoldPick ? '✨ ' : ''}Choose {restaurant.name}
           </span>
+          <ArrowRight
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0 stroke-[2.75] transition-transform group-hover:translate-x-0.5"
+          />
         </button>
       </div>
     </article>

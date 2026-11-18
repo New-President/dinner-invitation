@@ -33,7 +33,10 @@ function readOptionalString(value: unknown, maxLen: number, fallback: string): s
   return trimmed.length > 0 ? trimmed.slice(0, maxLen) : fallback;
 }
 
-export function parseInviteSubmission(raw: unknown): ValidationResult {
+export function parseInviteSubmission(
+  raw: unknown,
+  catalog: readonly Restaurant[]
+): ValidationResult {
   if (!isRecord(raw)) {
     return { ok: false, error: 'Request payload must be a JSON object.' };
   }
@@ -51,7 +54,7 @@ export function parseInviteSubmission(raw: unknown): ValidationResult {
     return { ok: false, error: 'Please select a vegetarian restaurant.' };
   }
 
-  const restaurant = findRestaurantById(rawRestaurantId.trim());
+  const restaurant = findRestaurantById(catalog, rawRestaurantId.trim());
   if (!restaurant) {
     return { ok: false, error: 'Selected vegetarian restaurant was not found in our catalog.' };
   }
@@ -63,7 +66,8 @@ export function parseInviteSubmission(raw: unknown): ValidationResult {
     };
   }
 
-  const rawComment = raw.comment;
+  // The comment is optional: missing or blank is fine and stays empty.
+  const rawComment = raw.comment ?? '';
   if (typeof rawComment !== 'string') {
     return { ok: false, error: 'Comment field must be a string.' };
   }
@@ -81,10 +85,7 @@ export function parseInviteSubmission(raw: unknown): ValidationResult {
       region: rawRegion,
       restaurantId: restaurant.id,
       restaurant,
-      comment:
-        trimmedComment.length > 0
-          ? trimmedComment
-          : 'Looking forward to catching up over a great dinner!',
+      comment: trimmedComment,
       guestName,
     },
   };

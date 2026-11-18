@@ -657,7 +657,7 @@ export function AddToCalendarMenu({
           ref={focusGroupRef}
           focusgroup="menu nomemory"
           aria-labelledby={triggerId}
-          className="rounded-2xl bg-[#251a29]/98 backdrop-blur-md border border-amber-300/35 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.72)] text-white"
+          className="rounded-2xl bg-[var(--surface-menu)]/98 backdrop-blur-md border border-amber-300/35 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.72)] text-white"
         >
           <div
             aria-hidden="true"

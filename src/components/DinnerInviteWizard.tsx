@@ -13,12 +13,17 @@ import {
 } from 'lucide-react';
 import {
   REGIONS,
-  getRestaurantsByRegion,
+  REGION_ORDER,
   type RegionId,
   type Restaurant,
   type RestaurantId,
 } from '@/lib/restaurants';
 import { DINNER_SCHEDULE, buildHostGoogleCalendarUrl } from '@/lib/calendar';
+import { commentForHost } from '@/lib/email-template';
+import { restaurantsForDisplay } from '@/lib/catalog';
+
+/** Upper bound for the in-browser relay fallback so "Sending…" can't hang. */
+const CLIENT_RELAY_TIMEOUT_MS = 8000;
 import { MINI_STAGE_CLEARANCE_PX } from '@/lib/mini-companion';
 import { SingaporeMap } from './SingaporeMap';
 import { GoogleMapsRestaurantCard } from './GoogleMapsRestaurantCard';
@@ -68,6 +73,18 @@ interface ViewTransitionDocument {
   ) => unknown;
 }
 
+/**
+ * A skipped or aborted transition rejects its promises even though the DOM
+ * update still runs; mark them handled so they don't surface as runtime errors.
+ */
+function swallowTransitionRejections(transition: unknown): void {
+  if (typeof transition !== 'object' || transition === null) return;
+  for (const key of ['ready', 'finished', 'updateCallbackDone'] as const) {
+    const promise = (transition as Record<string, unknown>)[key];
+    if (promise instanceof Promise) promise.catch(() => {});
+  }
+}
+
 function navigateWithTransition(
   updateDOM: () => void,
   direction: TransitionDirection
@@ -77,16 +94,20 @@ function navigateWithTransition(
     return;
   }
   const doc = document as unknown as ViewTransitionDocument;
-  if (typeof doc.startViewTransition === 'function') {
+  // Browsers abort view transitions in a background tab (InvalidStateError:
+  // "Document hidden"), e.g. when the guest switches tabs while sending.
+  if (typeof doc.startViewTransition === 'function' && !document.hidden) {
     try {
-      doc.startViewTransition({
-        update: updateDOM,
-        types: [direction],
-      });
+      swallowTransitionRejections(
+        doc.startViewTransition({
+          update: updateDOM,
+          types: [direction],
+        })
+      );
       return;
     } catch {
       try {
-        doc.startViewTransition(updateDOM);
+        swallowTransitionRejections(doc.startViewTransition(updateDOM));
         return;
       } catch {
         updateDOM();
@@ -97,7 +118,17 @@ function navigateWithTransition(
   updateDOM();
 }
 
-export function DinnerInviteWizard() {
+interface DinnerInviteWizardProps {
+  /** The current catalog (from /admin, or the built-in list). */
+  readonly restaurants: readonly Restaurant[];
+}
+
+export function DinnerInviteWizard({ restaurants }: DinnerInviteWizardProps) {
+  const regionList = (region: RegionId) => restaurantsForDisplay(restaurants, region);
+  const restaurantCounts = Object.fromEntries(
+    REGION_ORDER.map((region) => [region, regionList(region).length])
+  ) as Record<RegionId, number>;
+
   const [wizardState, setWizardState] = useState<WizardState>({
     kind: 'region',
     region: 'west',
@@ -106,7 +137,7 @@ export function DinnerInviteWizard() {
   const [selectedByRegion, setSelectedByRegion] = useState<
     Partial<Record<RegionId, RestaurantId>>
   >({
-    west: getRestaurantsByRegion('west')[0].id,
+    west: regionList('west')[0]?.id,
   });
   const [commentDraft, setCommentDraft] = useState<string>('');
   const [guestName, setGuestName] = useState<string>('');
@@ -152,10 +183,10 @@ export function DinnerInviteWizard() {
   }, [wizardState.kind]);
 
   const resolveRestaurantForRegion = (region: RegionId): Restaurant => {
-    const regionList = getRestaurantsByRegion(region);
+    const list = regionList(region);
     const savedId = selectedByRegion[region];
-    const matched = regionList.find((r) => r.id === savedId);
-    return matched ?? regionList[0];
+    const matched = list.find((r) => r.id === savedId);
+    return matched ?? list[0];
   };
 
   const enterRegionRestaurants = (region: RegionId) => {
@@ -222,10 +253,8 @@ export function DinnerInviteWizard() {
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const finalComment =
-      commentDraft.trim().length > 0
-        ? commentDraft.trim()
-        : 'Looking forward to catching up over a great dinner!';
+    // Comments are optional; a blank one is sent as blank.
+    const finalComment = commentDraft.trim();
     const finalGuestName =
       guestName.trim().length > 0 ? guestName.trim() : 'Dinner Guest';
 
@@ -290,9 +319,10 @@ export function DinnerInviteWizard() {
                   comment: finalComment,
                   guestName: finalGuestName,
                 }),
-                Message_For_Yong_Zi_Ren: finalComment,
+                Message_For_Yong_Zi_Ren: commentForHost(finalComment),
                 Submitted_At_SGT: timestamp,
               }),
+              signal: AbortSignal.timeout(CLIENT_RELAY_TIMEOUT_MS),
             }
           );
           const clientRelayData = (await clientRelayRes.json()) as {
@@ -330,7 +360,7 @@ export function DinnerInviteWizard() {
   };
 
   return (
-    <main className="min-h-dvh w-full bg-[#16101a] text-white overflow-x-hidden">
+    <main className="min-h-dvh w-full bg-[var(--page-bg)] text-white overflow-x-hidden">
       {(() => {
         switch (wizardState.kind) {
           case 'region': {
@@ -339,6 +369,7 @@ export function DinnerInviteWizard() {
                 selectedRegion={wizardState.region}
                 onEnterRegion={enterRegionRestaurants}
                 headingRef={stepHeadingRef}
+                restaurantCounts={restaurantCounts}
               />
             );
           }
@@ -346,7 +377,7 @@ export function DinnerInviteWizard() {
           case 'restaurant': {
             const { region, restaurantId } = wizardState;
             const regionMeta = REGIONS[region];
-            const regionRestaurants = getRestaurantsByRegion(region);
+            const regionRestaurants = regionList(region);
             const selectedRestaurant =
               regionRestaurants.find((r) => r.id === restaurantId) ??
               regionRestaurants[0];
@@ -355,7 +386,7 @@ export function DinnerInviteWizard() {
               <section
                 aria-labelledby="restaurant-step-heading"
                 style={STAGE_CLEARANCE_STYLE}
-                className="min-h-dvh w-full bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] p-4 sm:p-6 flex flex-col justify-between gap-4"
+                className="min-h-dvh w-full bg-gradient-to-br from-[var(--page-from)] via-[var(--page-via)] to-[var(--page-to)] p-4 sm:p-6 flex flex-col justify-between gap-4"
               >
                 {/* Top bar: back button, centered title (wraps instead of colliding), mirror spacer */}
                 <div className="flex flex-col lg:grid lg:grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 lg:gap-4 pb-3 border-b border-white/10 min-h-[56px]">
@@ -378,7 +409,7 @@ export function DinnerInviteWizard() {
                       tabIndex={-1}
                       className="text-base sm:text-xl md:text-2xl font-extrabold text-white tracking-tight text-balance focus:outline-none"
                     >
-                      3 Vegetarian Restaurants in {regionMeta.name}
+                      {regionRestaurants.length} Vegetarian Restaurant{regionRestaurants.length === 1 ? '' : 's'} in {regionMeta.name}
                     </h1>
                     <p className="text-[11px] sm:text-xs text-rose-200/85 mt-0.5">
                       Select a restaurant below
@@ -395,7 +426,7 @@ export function DinnerInviteWizard() {
                 {/* 3-Column Grid of GoogleMapsRestaurantCards */}
                 <fieldset className="border-0 p-0 m-0 flex-1 flex items-stretch">
                   <legend className="visually-hidden">
-                    Select one of the 3 vegetarian restaurants in {regionMeta.name}
+                    Select one of the {regionRestaurants.length} vegetarian restaurants in {regionMeta.name}
                   </legend>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-4 w-full pt-2">
@@ -442,7 +473,7 @@ export function DinnerInviteWizard() {
           case 'comment': {
             const { region, restaurantId } = wizardState;
             const regionMeta = REGIONS[region];
-            const regionRestaurants = getRestaurantsByRegion(region);
+            const regionRestaurants = regionList(region);
             const selectedRestaurant =
               regionRestaurants.find((r) => r.id === restaurantId) ??
               regionRestaurants[0];
@@ -451,13 +482,13 @@ export function DinnerInviteWizard() {
               <section
                 aria-labelledby="comment-step-heading"
                 style={STAGE_CLEARANCE_STYLE}
-                className="min-h-dvh w-full bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] p-4 sm:p-6 flex items-center justify-center"
+                className="min-h-dvh w-full bg-gradient-to-br from-[var(--page-from)] via-[var(--page-via)] to-[var(--page-to)] p-4 sm:p-6 flex items-center justify-center"
               >
                 <form
                   method="POST"
                   action="/api/send-invite"
                   onSubmit={(e) => handleFinalSubmit(e, region, selectedRestaurant)}
-                  className="max-w-2xl w-full rounded-3xl bg-[#221824]/95 border border-rose-400/30 p-5 sm:p-7 shadow-2xl space-y-5"
+                  className="max-w-2xl w-full rounded-3xl bg-[var(--surface-card)]/95 border border-rose-400/30 p-5 sm:p-7 shadow-2xl space-y-5"
                   noValidate
                 >
                   <input type="hidden" name="region" value={region} />
@@ -530,7 +561,7 @@ export function DinnerInviteWizard() {
                       className="block text-xs sm:text-sm font-bold text-rose-100 mb-1.5 flex items-center gap-1.5"
                     >
                       <MessageSquare className="w-4 h-4 text-rose-400" />
-                      Comments or Special Requests
+                      Comments or Special Requests (Optional)
                     </label>
                     <textarea
                       ref={commentTextareaRef}
@@ -593,7 +624,7 @@ export function DinnerInviteWizard() {
                       type="submit"
                       disabled={isSubmitting}
                       enterKeyHint="send"
-                      className="touch-target w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-rose-600 via-pink-600 to-fuchsia-600 hover:from-rose-500 hover:to-pink-500 disabled:opacity-60 text-white font-extrabold px-8 py-3.5 shadow-xl shadow-rose-500/30 transition-all cursor-pointer"
+                      className="btn-primary touch-target w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 disabled:opacity-60 cursor-pointer"
                     >
                       {isSubmitting ? (
                         <>
@@ -629,11 +660,11 @@ export function DinnerInviteWizard() {
               <section
                 aria-labelledby="thank-you-heading"
                 style={STAGE_CLEARANCE_STYLE}
-                className="min-h-dvh w-full overflow-x-hidden bg-gradient-to-br from-[#19121d] via-[#231729] to-[#1a1321] p-2.5 sm:p-5 flex items-center justify-center"
+                className="min-h-dvh w-full overflow-x-hidden bg-gradient-to-br from-[var(--page-from)] via-[var(--page-via)] to-[var(--page-to)] p-2.5 sm:p-5 flex items-center justify-center"
               >
                 <div
                   style={{ maxWidth: '1400px' }}
-                  className="w-full rounded-[24px] sm:rounded-[32px] bg-[#221824] border-2 border-rose-400/40 shadow-[0_24px_60px_rgba(225,29,72,0.28)] overflow-hidden flex flex-col"
+                  className="w-full rounded-[24px] sm:rounded-[32px] bg-[var(--surface-card)] border-2 border-rose-400/40 shadow-[0_24px_60px_var(--glow)] overflow-hidden flex flex-col"
                 >
                   <div className="relative bg-gradient-to-br from-rose-600 via-pink-600 to-purple-700 px-4 sm:px-6 py-3.5 sm:py-4 text-center text-white overflow-hidden shrink-0">
                     <h1
@@ -685,7 +716,7 @@ export function DinnerInviteWizard() {
                         <span className="text-emerald-300 font-medium">{timestampSGT}</span>
                       </div>
 
-                      <div className="grid grid-cols-1 grid-rows-[auto_minmax(240px,1fr)] lg:grid-cols-[1.22fr_0.78fr] lg:grid-rows-1 gap-4 rounded-3xl bg-[#18121a] text-white p-4 sm:p-5 border border-white/10 flex-1">
+                      <div className="grid grid-cols-1 grid-rows-[auto_minmax(240px,1fr)] lg:grid-cols-[1.22fr_0.78fr] lg:grid-rows-1 gap-4 rounded-3xl bg-[var(--surface-deep)] text-white p-4 sm:p-5 border border-white/10 flex-1">
                         <div className="flex flex-col gap-3">
                           <div>
                             <span className="inline-block rounded-full bg-rose-500 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
@@ -724,7 +755,7 @@ export function DinnerInviteWizard() {
                                 href={restaurant.directionsUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex min-w-0 flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-full bg-rose-500 hover:bg-rose-400 text-white font-bold px-2.5 sm:px-3.5 py-2 text-[11px] sm:text-xs leading-4 whitespace-nowrap transition-colors"
+                                className="btn-primary btn-sm inline-flex min-w-0 flex-1 sm:flex-none items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-2 text-[11px] sm:text-xs leading-4 whitespace-nowrap"
                               >
                                 <span className="truncate">Open in Google Maps</span>
                                 <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
@@ -761,9 +792,15 @@ export function DinnerInviteWizard() {
                           </span>
                           <span>From: {confirmedName}</span>
                         </div>
-                        <blockquote className="text-base sm:text-xl font-semibold text-white italic">
-                          “{comment}”
-                        </blockquote>
+                        {comment.trim().length > 0 ? (
+                          <blockquote className="text-base sm:text-xl font-semibold text-white italic">
+                            “{comment}”
+                          </blockquote>
+                        ) : (
+                          <p className="text-sm sm:text-base text-rose-200/70 italic">
+                            No message this time, just the dinner pick 😊
+                          </p>
+                        )}
                       </div>
                     </div>
 

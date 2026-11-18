@@ -4,11 +4,21 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { REGIONS } from '@/lib/restaurants';
 import { parseInviteSubmission } from '@/lib/validation';
+import { loadCatalog } from '@/lib/catalog-store';
 import { buildHostGoogleCalendarUrl } from '@/lib/calendar';
 import {
   RECIPIENT_EMAIL,
   buildInvitationEmailContent,
+  commentForHost,
 } from '@/lib/email-template';
+
+/**
+ * Upper bound for each delivery attempt. Without it a stalled SMTP handshake
+ * or relay could keep the guest staring at "Sending…" for minutes.
+ */
+const DELIVERY_TIMEOUT_MS = 8000;
+/** Gmail app passwords are always 16 letters (Google shows them in groups of 4). */
+const GMAIL_APP_PASSWORD_LENGTH = 16;
 
 function readEnvVarsFromDisk(): Record<string, string> {
   const result: Record<string, string> = {};
@@ -58,7 +68,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const parsed = parseInviteSubmission(rawBody);
+  const parsed = parseInviteSubmission(rawBody, await loadCatalog());
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }
@@ -94,16 +104,21 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   let smtpErrorDetail: string | null = null;
 
-  if (rawGmailPassword && rawGmailPassword !== 'your_16_char_gmail_app_password') {
-    const normalizedAppPassword = rawGmailPassword.replace(/\s+/g, '');
-    for (const candidatePass of Array.from(new Set([normalizedAppPassword, rawGmailPassword]))) {
+  const appPassword = rawGmailPassword.replace(/\s+/g, '');
+  if (appPassword && rawGmailPassword !== 'your_16_char_gmail_app_password') {
+    if (appPassword.length !== GMAIL_APP_PASSWORD_LENGTH) {
+      // A normal account password always fails with "Application-specific
+      // password required"; skip the round trip instead of waiting on it.
+      smtpErrorDetail = `GMAIL_APP_PASSWORD is ${appPassword.length} characters, but a Gmail app password is ${GMAIL_APP_PASSWORD_LENGTH}. Create one at https://myaccount.google.com/apppasswords.`;
+      console.warn(`[send-invite] Skipping Gmail SMTP: ${smtpErrorDetail}`);
+    } else {
       try {
         const transporter = nodemailer.createTransport({
           service: 'gmail',
-          auth: {
-            user: gmailUser,
-            pass: candidatePass,
-          },
+          auth: { user: gmailUser, pass: appPassword },
+          connectionTimeout: DELIVERY_TIMEOUT_MS,
+          greetingTimeout: DELIVERY_TIMEOUT_MS,
+          socketTimeout: DELIVERY_TIMEOUT_MS,
         });
 
         await transporter.sendMail({
@@ -128,6 +143,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         });
       } catch (err) {
         smtpErrorDetail = err instanceof Error ? err.message : 'SMTP transport failed';
+        console.warn(`[send-invite] Gmail SMTP failed: ${smtpErrorDetail}`);
       }
     }
   }
@@ -147,6 +163,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           text,
           html,
         }),
+        signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
       });
 
       if (res.ok) {
@@ -193,9 +210,10 @@ export async function POST(request: Request): Promise<NextResponse> {
           comment: submission.comment,
           guestName: submission.guestName,
         }),
-        Message_For_Yong_Zi_Ren: submission.comment,
+        Message_For_Yong_Zi_Ren: commentForHost(submission.comment),
         Submitted_At_SGT: timestampSGT,
       }),
+      signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
     });
     const formSubmitData = (await formSubmitRes.json()) as {
       success?: string | boolean;
@@ -212,8 +230,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (formSubmitData.message) {
       formSubmitMessage = formSubmitData.message;
     }
-  } catch {
-    // Ignore FormSubmit network error
+  } catch (err) {
+    // Network error or timeout; the client retries the relay from the browser.
+    console.warn(`[send-invite] FormSubmit relay failed: ${err instanceof Error ? err.message : err}`);
   }
 
   return NextResponse.json({

@@ -747,3 +747,130 @@ export function stepCompanionTick(
     }
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Dinner guest: sits at the table, can be picked up, walks back       */
+/* ------------------------------------------------------------------ */
+
+export const GUEST_WALK_SPEED_PX_PER_S = 120;
+
+export type GuestPhase =
+  | { readonly kind: 'seated' }
+  | { readonly kind: 'held'; readonly offsetX: number; readonly offsetY: number; readonly vx: number }
+  | { readonly kind: 'falling'; readonly vx: number; readonly vy: number }
+  | { readonly kind: 'landed'; readonly remainingMs: number }
+  | { readonly kind: 'returning' };
+
+export interface GuestState {
+  readonly x: number;
+  readonly y: number;
+  readonly facing: FacingDirection;
+  readonly phase: GuestPhase;
+}
+
+/**
+ * Top-left of the guest's sprite box (same size as Mini's) when she sits on
+ * the right-hand chair. Matches where the table scene draws her.
+ */
+export function computeGuestSeat(viewport: CompanionViewport): { readonly x: number; readonly y: number } {
+  const { tableLeft, tableWidth } = computeTableLayout(viewport);
+  return { x: tableLeft + tableWidth - 72 * MINI_SPRITE_SCALE, y: computeFloorY(viewport) };
+}
+
+export function createSeatedGuest(viewport: CompanionViewport): GuestState {
+  return { ...computeGuestSeat(viewport), facing: 'left', phase: { kind: 'seated' } };
+}
+
+export function grabGuest(state: GuestState, offsetX: number, offsetY: number): GuestState {
+  return { ...state, phase: { kind: 'held', offsetX, offsetY, vx: 0 } };
+}
+
+export function moveGuest(
+  state: GuestState,
+  clientX: number,
+  clientY: number,
+  dtMs: number,
+  viewport: CompanionViewport
+): GuestState {
+  if (state.phase.kind !== 'held') return state;
+  const { offsetX, offsetY } = state.phase;
+  const clamped = clampCompanionPosition(clientX - offsetX, clientY - offsetY, viewport);
+  const dx = clamped.x - state.x;
+  const safeDtSec = Math.max(0.008, Math.min(0.1, dtMs / 1000));
+  const vx = Math.max(-900, Math.min(900, (dx / safeDtSec) * 0.65 + state.phase.vx * 0.35));
+  const facing: FacingDirection = Math.abs(dx) > 0.5 ? (dx > 0 ? 'right' : 'left') : state.facing;
+  return { ...clamped, facing, phase: { kind: 'held', offsetX, offsetY, vx } };
+}
+
+/** Arrow-key movement; the caller releases her once keys stop. */
+export function nudgeGuest(
+  state: GuestState,
+  dx: number,
+  dy: number,
+  viewport: CompanionViewport
+): GuestState {
+  const clamped = clampCompanionPosition(state.x + dx, state.y + dy, viewport);
+  const facing: FacingDirection = dx > 0 ? 'right' : dx < 0 ? 'left' : state.facing;
+  return {
+    ...clamped,
+    facing,
+    phase: { kind: 'held', offsetX: 0, offsetY: 0, vx: Math.max(-900, Math.min(900, dx * 12)) },
+  };
+}
+
+export function releaseGuest(state: GuestState, viewport: CompanionViewport): GuestState {
+  if (state.phase.kind !== 'held') return state;
+  const floorY = computeFloorY(viewport);
+  const clamped = clampCompanionPosition(state.x, state.y, viewport);
+  if (clamped.y < floorY - 2) {
+    return { ...state, ...clamped, phase: { kind: 'falling', vx: state.phase.vx * 0.25, vy: 0 } };
+  }
+  return { ...state, x: clamped.x, y: floorY, phase: { kind: 'landed', remainingMs: 360 } };
+}
+
+export function stepGuestTick(state: GuestState, dtMs: number, viewport: CompanionViewport): GuestState {
+  const clampedDtMs = Math.max(0, Math.min(64, dtMs));
+  const dtSec = clampedDtMs / 1000;
+  const floorY = computeFloorY(viewport);
+  const seat = computeGuestSeat(viewport);
+
+  switch (state.phase.kind) {
+    case 'seated':
+      return state.x === seat.x && state.y === seat.y ? state : { ...state, ...seat };
+    case 'held':
+      return state;
+    case 'falling': {
+      const vy = state.phase.vy + GRAVITY_PX_PER_S2 * dtSec;
+      const vx = state.phase.vx * Math.pow(0.92, clampedDtMs / 16.67);
+      const rawY = state.y + vy * dtSec;
+      const clamped = clampCompanionPosition(state.x + vx * dtSec, rawY, viewport);
+      const facing: FacingDirection = Math.abs(vx) > 8 ? (vx > 0 ? 'right' : 'left') : state.facing;
+      if (rawY >= floorY - 0.5) {
+        return { ...state, x: clamped.x, y: floorY, facing, phase: { kind: 'landed', remainingMs: 420 } };
+      }
+      return { ...state, ...clamped, facing, phase: { kind: 'falling', vx, vy } };
+    }
+    case 'landed': {
+      const remainingMs = state.phase.remainingMs - clampedDtMs;
+      if (remainingMs > 0) return { ...state, y: floorY, phase: { kind: 'landed', remainingMs } };
+      return { ...state, y: floorY, facing: seat.x >= state.x ? 'right' : 'left', phase: { kind: 'returning' } };
+    }
+    case 'returning': {
+      const delta = seat.x - state.x;
+      const maxStep = GUEST_WALK_SPEED_PX_PER_S * dtSec;
+      if (Math.abs(delta) <= Math.max(3, maxStep)) {
+        return { ...seat, facing: 'left', phase: { kind: 'seated' } };
+      }
+      return {
+        ...state,
+        x: state.x + Math.sign(delta) * maxStep,
+        y: floorY,
+        facing: delta >= 0 ? 'right' : 'left',
+      };
+    }
+    default: {
+      const _exhaustive: never = state.phase;
+      return _exhaustive;
+    }
+  }
+}

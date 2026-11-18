@@ -1,8 +1,16 @@
 'use client';
 
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   DRAG_ACTIVATION_PX,
+  createSeatedGuest,
+  grabGuest,
+  moveGuest,
+  nudgeGuest,
+  releaseGuest,
+  stepGuestTick,
+  type GuestPhase,
+  type GuestState,
   KEYBOARD_STEP_PX,
   MINI_SPRITE_SCALE,
   MINI_HEIGHT,
@@ -106,9 +114,20 @@ const DINNER_CHAT = [
   { speaker: 'mini', line: 'Cheers! 🥤' },
 ] as const;
 
-const DINNER_LINE_MS = 3000;
-const CHATTER_EVERY_MS = 3400;
-const CHATTER_SHOW_MS = 2700;
+const GUEST_POKE_LINES = ['Hi there! 👋', 'Hehe, that tickles 😊', 'This food is so good!', 'Don’t drop me! 😳'] as const;
+
+/** 72 s bite cycle / 4.5 s = 16 lines, a whole number of passes through DINNER_CHAT. */
+const DINNER_LINE_MS = 4500;
+/** One ambient line every SPEECH_EVERY_MS, each held on screen for SPEECH_SHOW_MS. */
+const SPEECH_FIRST_MS = 1500;
+const SPEECH_EVERY_MS = 7500;
+const SPEECH_SHOW_MS = 5000;
+const POKE_SHOW_MS = 3200;
+/** After a touch elsewhere on the page Mini stays quiet so his bubble doesn't cover what you're tapping. */
+const QUIET_AFTER_TOUCH_MS = 6000;
+/** Narrow screens put Mini's bubble beside him instead of over the content above. */
+const COMPACT_MAX_WIDTH = 640;
+const SIDE_BUBBLE_OVERLAP = 18;
 const FLOOR_POLL_MS = 150;
 const SNACK_REACT_MS = 1900;
 const SNACK_REFILL_MS = 7000;
@@ -142,6 +161,170 @@ function dinnerChatIndex(phase: CompanionPhase): number {
   return phase.kind === 'seated-eating'
     ? Math.floor(phase.biteTick / DINNER_LINE_MS) % DINNER_CHAT.length
     : -1;
+}
+
+type RoamingAction = Extract<CompanionPhase, { kind: 'roaming-anxious' }>['action'];
+
+/** The line pool for what Mini is doing right now, with a key for cycling through it. */
+function ambientPool(step: RoamingStep, action: RoamingAction): { readonly key: string; readonly lines: readonly string[] } {
+  switch (action) {
+    case 'peeking':
+      return { key: `peek-${step}`, lines: PEEK_LINES[step] };
+    case 'checking-watch':
+      return { key: 'watch', lines: WATCH_LINES };
+    case 'fidgeting':
+      return { key: 'fidget', lines: FIDGET_LINES };
+    case 'pacing':
+      return { key: `chatter-${step}`, lines: CHATTER_LINES[step] };
+    default: {
+      const _exhaustive: never = action;
+      return _exhaustive;
+    }
+  }
+}
+
+function isGuestVisuallyDifferent(a: GuestState, b: GuestState): boolean {
+  return (
+    Math.abs(a.x - b.x) > 0.05 ||
+    Math.abs(a.y - b.y) > 0.05 ||
+    a.facing !== b.facing ||
+    a.phase.kind !== b.phase.kind ||
+    (a.phase.kind === 'held' && b.phase.kind === 'held' && Math.round(a.phase.vx / 60) !== Math.round(b.phase.vx / 60))
+  );
+}
+
+function guestPose(phase: GuestPhase): MiniPose {
+  switch (phase.kind) {
+    case 'seated':
+      return 'seated';
+    case 'held':
+      return 'dangle';
+    case 'falling':
+      return 'fall';
+    case 'landed':
+      return 'land';
+    case 'returning':
+      return 'walk';
+    default: {
+      const _exhaustive: never = phase;
+      return _exhaustive;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Drag handle: pointer drag, arrow-key nudging, tap                   */
+/* ------------------------------------------------------------------ */
+
+interface DragCallbacks {
+  /** Top-left of the draggable box, or null when it can't be grabbed yet. */
+  readonly origin: () => { readonly x: number; readonly y: number } | null;
+  readonly grab: (offsetX: number, offsetY: number) => void;
+  readonly move: (clientX: number, clientY: number, dtMs: number) => void;
+  readonly nudge: (dx: number, dy: number) => void;
+  readonly release: () => void;
+  readonly isHeld: () => boolean;
+  readonly tap: () => void;
+}
+
+const ARROW_DELTAS: Readonly<Record<string, readonly [number, number]>> = {
+  ArrowLeft: [-KEYBOARD_STEP_PX, 0],
+  ArrowRight: [KEYBOARD_STEP_PX, 0],
+  ArrowUp: [0, -KEYBOARD_STEP_PX],
+  ArrowDown: [0, KEYBOARD_STEP_PX],
+};
+
+function useDragHandle(callbacks: DragCallbacks) {
+  const callbacksRef = useRef(callbacks);
+  useLayoutEffect(() => {
+    callbacksRef.current = callbacks;
+  });
+  const pointerRef = useRef<PointerSession | null>(null);
+  const suppressClickRef = useRef<boolean>(false);
+  const keyboardDropTimerRef = useRef<number | null>(null);
+
+  const drop = useCallback(() => {
+    if (keyboardDropTimerRef.current !== null) {
+      window.clearTimeout(keyboardDropTimerRef.current);
+      keyboardDropTimerRef.current = null;
+    }
+    if (callbacksRef.current.isHeld()) callbacksRef.current.release();
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (keyboardDropTimerRef.current !== null) window.clearTimeout(keyboardDropTimerRef.current);
+    },
+    []
+  );
+
+  const finishPointer = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const session = pointerRef.current;
+    if (!session || session.pointerId !== event.pointerId) return;
+    pointerRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (session.dragging) drop();
+  };
+
+  return {
+    onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
+      const origin = callbacksRef.current.origin();
+      if (!origin || !event.isPrimary || event.button !== 0) return;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      pointerRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        offsetX: event.clientX - origin.x,
+        offsetY: event.clientY - origin.y,
+        lastMoveAt: event.timeStamp,
+        dragging: false,
+      };
+    },
+    onPointerMove: (event: React.PointerEvent<HTMLButtonElement>) => {
+      const session = pointerRef.current;
+      if (!session || session.pointerId !== event.pointerId) return;
+      if (!session.dragging) {
+        const travel = Math.hypot(event.clientX - session.startX, event.clientY - session.startY);
+        if (travel < DRAG_ACTIVATION_PX) return;
+        session.dragging = true;
+        suppressClickRef.current = true;
+        callbacksRef.current.grab(session.offsetX, session.offsetY);
+      }
+      callbacksRef.current.move(event.clientX, event.clientY, event.timeStamp - session.lastMoveAt);
+      session.lastMoveAt = event.timeStamp;
+    },
+    onPointerUp: finishPointer,
+    onPointerCancel: finishPointer,
+    onLostPointerCapture: (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (pointerRef.current?.pointerId === event.pointerId) finishPointer(event);
+    },
+    onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      const delta = ARROW_DELTAS[event.key];
+      if (delta) {
+        event.preventDefault();
+        callbacksRef.current.nudge(delta[0], delta[1]);
+        if (keyboardDropTimerRef.current !== null) window.clearTimeout(keyboardDropTimerRef.current);
+        keyboardDropTimerRef.current = window.setTimeout(drop, 900);
+        return;
+      }
+      if (callbacksRef.current.isHeld() && ['Enter', ' ', 'Escape'].includes(event.key)) {
+        event.preventDefault();
+        drop();
+      }
+    },
+    onBlur: drop,
+    onClick: () => {
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false;
+        return;
+      }
+      callbacksRef.current.tap();
+    },
+    onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => event.preventDefault(),
+  };
 }
 
 function tiltBucket(phase: CompanionPhase): number {
@@ -187,14 +370,14 @@ interface PointerSession {
 export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
   const [state, setState] = useState<CompanionState | null>(null);
   const [viewport, setViewport] = useState<CompanionViewport | null>(null);
-  const [lineIndex, setLineIndex] = useState<number>(0);
+  const [guest, setGuest] = useState<GuestState | null>(null);
   const [nervousIndex, setNervousIndex] = useState<number>(0);
   const [jolt, setJolt] = useState<boolean>(false);
-  const [chatter, setChatter] = useState<{ readonly index: number; readonly visible: boolean }>({
-    index: 0,
-    visible: true,
-  });
+  /** Mini's ambient line while roaming; changes on a slow timer, not on every action. */
+  const [ambientLine, setAmbientLine] = useState<string | null>(null);
   const [pokeLine, setPokeLine] = useState<string | null>(null);
+  const [guestPokeLine, setGuestPokeLine] = useState<string | null>(null);
+  const [guestLandingKey, setGuestLandingKey] = useState<number>(0);
   const [landingKey, setLandingKey] = useState<number>(0);
   const [announcement, setAnnouncement] = useState<string>('');
   /** Easter-egg state: bowls emptied by the cat, and who is currently reacting (they take turns). */
@@ -205,11 +388,12 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
 
   const stateRef = useRef<CompanionState | null>(null);
   const viewportRef = useRef<CompanionViewport | null>(null);
-  const pointerRef = useRef<PointerSession | null>(null);
-  const suppressClickRef = useRef<boolean>(false);
-  const keyboardDropTimerRef = useRef<number | null>(null);
+  const guestRef = useRef<GuestState | null>(null);
   const pokeTimerRef = useRef<number | null>(null);
   const pokeCountRef = useRef<number>(0);
+  const guestPokeTimerRef = useRef<number | null>(null);
+  const guestPokeCountRef = useRef<number>(0);
+  const quietUntilRef = useRef<number>(0);
 
   const commit = useCallback((next: CompanionState) => {
     const prev = stateRef.current;
@@ -229,16 +413,20 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
         setAnnouncement('Mini Zi Ren sat down at the dinner table and started eating.');
       }
     }
-    if (
-      next.phase.kind === 'roaming-anxious' &&
-      next.phase.action !== 'pacing' &&
-      (prev?.phase.kind !== 'roaming-anxious' || prev.phase.action !== next.phase.action)
-    ) {
-      setLineIndex((i) => i + 1);
-    }
-
     if (!prev || isVisuallyDifferent(prev, next)) {
       setState(next);
+    }
+  }, []);
+
+  const commitGuest = useCallback((next: GuestState | null) => {
+    const prev = guestRef.current;
+    guestRef.current = next;
+    if (prev === next) return;
+    if (next?.phase.kind === 'landed' && prev?.phase.kind !== 'landed') {
+      setGuestLandingKey((k) => k + 1);
+    }
+    if (!prev || !next || isGuestVisuallyDifferent(prev, next)) {
+      setGuest(next);
     }
   }, []);
 
@@ -259,7 +447,12 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
     if (current && vp) {
       commit(syncCompanionStep(current, step, vp));
     }
-  }, [step, commit]);
+    // The guest only exists at the dinner table.
+    if (step !== 'thank-you') commitGuest(null);
+    else if (!guestRef.current && vp) commitGuest(createSeatedGuest(vp));
+    // A line about the previous step shouldn't linger into the next one.
+    setAmbientLine(null);
+  }, [step, commit, commitGuest]);
 
   // Animation loop; also re-measures the viewport and footer floor.
   useEffect(() => {
@@ -283,27 +476,55 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
       if (current && vp && !document.hidden) {
         commit(stepCompanionTick(current, dt, vp));
       }
+      const currentGuest = guestRef.current;
+      if (currentGuest && vp && !document.hidden) {
+        commitGuest(stepGuestTick(currentGuest, dt, vp));
+      }
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(frame);
-  }, [commit]);
+  }, [commit, commitGuest]);
 
-  // Frequent chatter: a new line every few seconds.
+  // Ambient speech: one line every SPEECH_EVERY_MS, matched to what he's doing
+  // at that moment and held for SPEECH_SHOW_MS so it can actually be read.
   useEffect(() => {
+    const counters = new Map<string, number>();
+    let nextTimer: number | null = null;
     let hideTimer: number | null = null;
-    const showTimer = window.setInterval(() => {
-      setChatter((c) => ({ index: c.index + 1, visible: true }));
+    const speak = () => {
+      const current = stateRef.current;
+      if (!current || current.phase.kind !== 'roaming-anxious' || current.step === 'thank-you') return;
+      if (document.hidden || performance.now() < quietUntilRef.current) return;
+      const pool = ambientPool(current.step, current.phase.action);
+      const n = counters.get(pool.key) ?? 0;
+      counters.set(pool.key, n + 1);
+      setAmbientLine(pool.lines[n % pool.lines.length]);
       if (hideTimer !== null) window.clearTimeout(hideTimer);
-      hideTimer = window.setTimeout(
-        () => setChatter((c) => ({ ...c, visible: false })),
-        CHATTER_SHOW_MS
-      );
-    }, CHATTER_EVERY_MS);
+      hideTimer = window.setTimeout(() => setAmbientLine(null), SPEECH_SHOW_MS);
+    };
+    const loop = () => {
+      speak();
+      nextTimer = window.setTimeout(loop, SPEECH_EVERY_MS);
+    };
+    nextTimer = window.setTimeout(loop, SPEECH_FIRST_MS);
     return () => {
-      window.clearInterval(showTimer);
+      if (nextTimer !== null) window.clearTimeout(nextTimer);
       if (hideTimer !== null) window.clearTimeout(hideTimer);
     };
+  }, []);
+
+  // Touching the page anywhere else hushes Mini for a while, so on phones his
+  // bubble never sits over the region or card you're about to tap.
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') return;
+      if (event.target instanceof Element && event.target.closest('.mini-drag-handle')) return;
+      quietUntilRef.current = performance.now() + QUIET_AFTER_TOUCH_MS;
+      setAmbientLine(null);
+    };
+    window.addEventListener('pointerdown', onPointerDown, { capture: true, passive: true });
+    return () => window.removeEventListener('pointerdown', onPointerDown, { capture: true });
   }, []);
 
   // Cycle through nervous faces so he never looks calm before dinner is set.
@@ -353,117 +574,76 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
 
   useEffect(
     () => () => {
-      if (keyboardDropTimerRef.current !== null) window.clearTimeout(keyboardDropTimerRef.current);
       if (pokeTimerRef.current !== null) window.clearTimeout(pokeTimerRef.current);
+      if (guestPokeTimerRef.current !== null) window.clearTimeout(guestPokeTimerRef.current);
     },
     []
   );
 
-  const drop = useCallback(() => {
-    if (keyboardDropTimerRef.current !== null) {
-      window.clearTimeout(keyboardDropTimerRef.current);
-      keyboardDropTimerRef.current = null;
-    }
-    const current = stateRef.current;
-    const vp = viewportRef.current;
-    if (current && vp && current.phase.kind === 'dragging') {
-      commit(endCompanionDrag(current, vp));
-    }
-  }, [commit]);
+  /* ---------------- Drag handles ---------------- */
 
-  const showPoke = useCallback((line: string) => {
-    setPokeLine(line);
-    if (pokeTimerRef.current !== null) window.clearTimeout(pokeTimerRef.current);
-    pokeTimerRef.current = window.setTimeout(() => setPokeLine(null), 2600);
-  }, []);
-
-  /* ---------------- Pointer drag ---------------- */
-
-  const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const current = stateRef.current;
-    if (!current || !event.isPrimary || event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    pointerRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      offsetX: event.clientX - current.x,
-      offsetY: event.clientY - current.y,
-      lastMoveAt: event.timeStamp,
-      dragging: false,
-    };
-  };
-
-  const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const session = pointerRef.current;
-    const vp = viewportRef.current;
-    if (!session || session.pointerId !== event.pointerId || !vp) return;
-
-    if (!session.dragging) {
-      const travel = Math.hypot(event.clientX - session.startX, event.clientY - session.startY);
-      if (travel < DRAG_ACTIVATION_PX) return;
-      session.dragging = true;
-      suppressClickRef.current = true;
+  const miniHandlers = useDragHandle({
+    origin: () => stateRef.current,
+    grab: (offsetX, offsetY) => {
       const current = stateRef.current;
-      if (current) commit(startCompanionDrag(current, session.offsetX, session.offsetY));
-    }
+      if (current) commit(startCompanionDrag(current, offsetX, offsetY));
+    },
+    move: (clientX, clientY, dtMs) => {
+      const current = stateRef.current;
+      const vp = viewportRef.current;
+      if (current && vp) commit(moveCompanionDrag(current, clientX, clientY, dtMs, vp));
+    },
+    nudge: (dx, dy) => {
+      const current = stateRef.current;
+      const vp = viewportRef.current;
+      if (current && vp) commit(nudgeCompanion(current, dx, dy, vp));
+    },
+    release: () => {
+      const current = stateRef.current;
+      const vp = viewportRef.current;
+      if (current && vp) commit(endCompanionDrag(current, vp));
+    },
+    isHeld: () => stateRef.current?.phase.kind === 'dragging',
+    tap: () => {
+      const current = stateRef.current;
+      if (!current) return;
+      const lines = POKE_LINES[current.step];
+      setPokeLine(lines[pokeCountRef.current % lines.length]);
+      pokeCountRef.current += 1;
+      if (pokeTimerRef.current !== null) window.clearTimeout(pokeTimerRef.current);
+      pokeTimerRef.current = window.setTimeout(() => setPokeLine(null), POKE_SHOW_MS);
+    },
+  });
 
-    const current = stateRef.current;
-    if (!current) return;
-    commit(
-      moveCompanionDrag(current, event.clientX, event.clientY, event.timeStamp - session.lastMoveAt, vp)
-    );
-    session.lastMoveAt = event.timeStamp;
-  };
-
-  const finishPointer = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const session = pointerRef.current;
-    if (!session || session.pointerId !== event.pointerId) return;
-    pointerRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    if (session.dragging) drop();
-  };
-
-  /* ---------------- Keyboard + click ---------------- */
-
-  const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    const vp = viewportRef.current;
-    const current = stateRef.current;
-    if (!vp || !current) return;
-
-    const deltas: Record<string, readonly [number, number]> = {
-      ArrowLeft: [-KEYBOARD_STEP_PX, 0],
-      ArrowRight: [KEYBOARD_STEP_PX, 0],
-      ArrowUp: [0, -KEYBOARD_STEP_PX],
-      ArrowDown: [0, KEYBOARD_STEP_PX],
-    };
-    const delta = deltas[event.key];
-    if (delta) {
-      event.preventDefault();
-      commit(nudgeCompanion(current, delta[0], delta[1], vp));
-      if (keyboardDropTimerRef.current !== null) window.clearTimeout(keyboardDropTimerRef.current);
-      keyboardDropTimerRef.current = window.setTimeout(drop, 900);
-      return;
-    }
-    if (current.phase.kind === 'dragging' && ['Enter', ' ', 'Escape'].includes(event.key)) {
-      event.preventDefault();
-      drop();
-    }
-  };
-
-  const onClick = () => {
-    if (suppressClickRef.current) {
-      suppressClickRef.current = false;
-      return;
-    }
-    const current = stateRef.current;
-    if (!current) return;
-    const lines = POKE_LINES[current.step];
-    showPoke(lines[pokeCountRef.current % lines.length]);
-    pokeCountRef.current += 1;
-  };
+  const guestHandlers = useDragHandle({
+    origin: () => guestRef.current,
+    grab: (offsetX, offsetY) => {
+      const current = guestRef.current;
+      if (current) commitGuest(grabGuest(current, offsetX, offsetY));
+    },
+    move: (clientX, clientY, dtMs) => {
+      const current = guestRef.current;
+      const vp = viewportRef.current;
+      if (current && vp) commitGuest(moveGuest(current, clientX, clientY, dtMs, vp));
+    },
+    nudge: (dx, dy) => {
+      const current = guestRef.current;
+      const vp = viewportRef.current;
+      if (current && vp) commitGuest(nudgeGuest(current, dx, dy, vp));
+    },
+    release: () => {
+      const current = guestRef.current;
+      const vp = viewportRef.current;
+      if (current && vp) commitGuest(releaseGuest(current, vp));
+    },
+    isHeld: () => guestRef.current?.phase.kind === 'held',
+    tap: () => {
+      setGuestPokeLine(GUEST_POKE_LINES[guestPokeCountRef.current % GUEST_POKE_LINES.length]);
+      guestPokeCountRef.current += 1;
+      if (guestPokeTimerRef.current !== null) window.clearTimeout(guestPokeTimerRef.current);
+      guestPokeTimerRef.current = window.setTimeout(() => setGuestPokeLine(null), POKE_SHOW_MS);
+    },
+  });
 
   if (!state || !viewport) {
     return null;
@@ -480,29 +660,27 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
   const chatIndex = dinnerChatIndex(state.phase);
   const chat = chatIndex >= 0 ? DINNER_CHAT[chatIndex] : null;
 
+  const guestAway = state.step === 'thank-you' && !!guest && guest.phase.kind !== 'seated';
+  const resolvedGuestName = guestName?.trim() || 'Guest';
+
   let miniBubble: string | null = pokeLine;
   if (!miniBubble) {
     if (state.phase.kind === 'dragging') miniBubble = 'Whoa! Put me down! 😳';
     else if (state.phase.kind === 'falling') miniBubble = 'Aaah!';
     else if (state.phase.kind === 'landed') miniBubble = 'Oof… I’m okay';
+    else if (guestAway && guest?.phase.kind === 'held') miniBubble = 'Hey, careful with her! 😂';
+    else if (guestAway) miniBubble = 'Come back, the food’s getting cold! 🥢';
     else if (state.phase.kind === 'walking-to-table') miniBubble = 'Phew, dinner’s on! 😮‍💨';
     else if (chat?.speaker === 'mini') miniBubble = chat.line;
-    else if (state.phase.kind === 'roaming-anxious' && state.step !== 'thank-you') {
-      if (state.phase.action === 'peeking') {
-        const lines = PEEK_LINES[state.step];
-        miniBubble = lines[lineIndex % lines.length];
-      } else if (state.phase.action === 'checking-watch') {
-        miniBubble = WATCH_LINES[lineIndex % WATCH_LINES.length];
-      } else if (state.phase.action === 'fidgeting') {
-        miniBubble = FIDGET_LINES[lineIndex % FIDGET_LINES.length];
-      } else if (chatter.visible) {
-        const lines = CHATTER_LINES[state.step];
-        miniBubble = lines[chatter.index % lines.length];
-      }
-    }
+    else if (state.phase.kind === 'roaming-anxious' && state.step !== 'thank-you') miniBubble = ambientLine;
   }
-  let guestBubble: string | null = null;
-  if (!pokeLine) {
+  let guestBubble: string | null = guestPokeLine;
+  if (!guestBubble && guestAway && guest) {
+    if (guest.phase.kind === 'held') guestBubble = 'Eek! Put me down! 😳';
+    else if (guest.phase.kind === 'falling') guestBubble = 'Whoaaa!';
+    else if (guest.phase.kind === 'landed') guestBubble = 'Oof! I’m okay 😅';
+    else guestBubble = 'Coming back to my seat!';
+  } else if (!guestBubble && !pokeLine) {
     if (state.phase.kind === 'walking-to-table') guestBubble = 'Nice to meet you! 😊';
     else if (chat?.speaker === 'guest') guestBubble = chat.line;
   }
@@ -517,16 +695,95 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
   const bubbleAlign: BubbleAlign =
     zone === 'left side' ? 'left' : zone === 'right side' ? 'right' : 'center';
 
+  // On phones the region map and cards sit right above Mini, so his bubble goes
+  // beside him (on the roomier side) instead of on top of them.
+  let miniBubbleSide: BubbleSide | undefined;
+  if (viewport.width < COMPACT_MAX_WIDTH && state.step !== 'thank-you') {
+    const rightRoom = viewport.width - (state.x + MINI_WIDTH - SIDE_BUBBLE_OVERLAP) - 8;
+    const leftRoom = state.x + SIDE_BUBBLE_OVERLAP - 8;
+    miniBubbleSide = {
+      dir: rightRoom >= leftRoom ? 'right' : 'left',
+      inset: MINI_WIDTH - SIDE_BUBBLE_OVERLAP,
+      maxWidth: Math.max(110, Math.min(180, Math.max(rightRoom, leftRoom))),
+    };
+  }
+
   return (
     <div className="mini-stage fixed inset-0 z-40 pointer-events-none">
       {state.step === 'thank-you' && (
         <BistroTableScene
           viewport={viewport}
-          guestName={guestName?.trim() || 'Guest'}
-          guestBubble={guestBubble}
+          guestName={resolvedGuestName}
+          guestBubble={guestAway ? null : guestBubble}
+          guestSeated={!guestAway}
           foodGone={snack.foodGone}
           jolt={jolt}
         />
+      )}
+
+      {state.step === 'thank-you' && guest && (
+        <button
+          type="button"
+          aria-label={`${resolvedGuestName}, your dinner guest. Drag her anywhere, or use the arrow keys to move her.`}
+          aria-describedby="mini-companion-help"
+          className={`mini-drag-handle pointer-events-auto absolute left-0 top-0 rounded-2xl bg-transparent p-0 border-0 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-pink-300 ${
+            guest.phase.kind === 'held' ? 'dragging' : ''
+          }`}
+          style={{
+            width: MINI_WIDTH,
+            height: MINI_HEIGHT,
+            transform: `translate3d(${guest.x}px, ${guest.y}px, 0)`,
+          }}
+          data-guest-phase={guest.phase.kind}
+          {...guestHandlers}
+        >
+          {guestAway && guestBubble && (
+            <ChatBubble
+              key={guestBubble}
+              name={resolvedGuestName}
+              text={guestBubble}
+              accent="#f472b6"
+              align={
+                describeHorizontalZone(guest.x, viewport.width) === 'left side'
+                  ? 'left'
+                  : describeHorizontalZone(guest.x, viewport.width) === 'right side'
+                    ? 'right'
+                    : 'center'
+              }
+              tailOffset={MINI_WIDTH / 2}
+            />
+          )}
+          {guestAway && (
+            <span
+              className="block h-full w-full"
+              style={{
+                transform: `rotate(${guest.phase.kind === 'held' ? Math.max(-16, Math.min(16, guest.phase.vx / 45)) : 0}deg)`,
+                transformOrigin: '50% 12%',
+                transition: 'transform 120ms ease-out',
+              }}
+            >
+              <span
+                key={guestLandingKey}
+                className={`block h-full w-full ${guest.phase.kind === 'landed' ? 'animate-mini-land' : ''}`}
+              >
+                <svg
+                  viewBox={`0 0 ${SPRITE_W} ${SPRITE_H}`}
+                  width={MINI_WIDTH}
+                  height={MINI_HEIGHT}
+                  aria-hidden="true"
+                  className="block overflow-visible"
+                >
+                  {(guest.phase.kind === 'landed' || guest.phase.kind === 'returning') && (
+                    <ellipse cx="38" cy="90" rx="17" ry="2.6" fill="rgba(0,0,0,0.4)" />
+                  )}
+                  <g transform={guest.facing === 'left' ? `translate(${SPRITE_W} 0) scale(-1 1)` : undefined}>
+                    <GuestSprite pose={guestPose(guest.phase)} />
+                  </g>
+                </svg>
+              </span>
+            </span>
+          )}
+        </button>
       )}
 
       <button
@@ -544,17 +801,7 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
         data-phase={state.phase.kind}
         data-expression={expression}
         data-nervous={isAnxious(expression) ? NERVOUS_FACES[nervousIndex % NERVOUS_FACES.length] : undefined}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={finishPointer}
-        onPointerCancel={finishPointer}
-        onLostPointerCapture={(event) => {
-          if (pointerRef.current?.pointerId === event.pointerId) finishPointer(event);
-        }}
-        onKeyDown={onKeyDown}
-        onBlur={drop}
-        onClick={onClick}
-        onContextMenu={(event) => event.preventDefault()}
+        {...miniHandlers}
       >
         {miniBubble && (
           <ChatBubble
@@ -564,6 +811,7 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
             accent="#22d3ee"
             align={bubbleAlign}
             tailOffset={MINI_WIDTH / 2}
+            side={miniBubbleSide}
           />
         )}
         <span
@@ -589,7 +837,7 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
       </button>
 
       <p id="mini-companion-help" className="visually-hidden">
-        Press Enter, Space, or Escape to drop him, or wait a moment and he falls back to the floor.
+        Press Enter, Space, or Escape to let go, or wait a moment and they drop back to the floor.
       </p>
       <p className="visually-hidden" aria-live="polite" role="status">
         {announcement}
@@ -604,9 +852,17 @@ export function MiniCompanion({ step, guestName }: MiniCompanionProps) {
 
 type BubbleAlign = 'left' | 'center' | 'right';
 
+/** Puts the bubble beside the speaker's head instead of above them. */
+interface BubbleSide {
+  readonly dir: 'left' | 'right';
+  /** Distance (px) from the parent's near edge to the bubble's near edge. */
+  readonly inset: number;
+  readonly maxWidth: number;
+}
+
 /**
  * A chat-message style speech bubble: speaker name header, wrapped message,
- * and a tail pointing down at whoever is speaking.
+ * and a tail pointing at whoever is speaking (down, or sideways with `side`).
  */
 function ChatBubble({
   name,
@@ -615,6 +871,7 @@ function ChatBubble({
   align,
   tailOffset,
   bottom,
+  side,
 }: {
   readonly name: string;
   readonly text: string;
@@ -624,11 +881,29 @@ function ChatBubble({
   readonly tailOffset: number;
   /** Explicit bottom offset (px); defaults to sitting just above the parent. */
   readonly bottom?: number;
+  readonly side?: BubbleSide;
 }) {
-  const horizontal =
-    align === 'left' ? 'left-0' : align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2';
-  const tailStyle: React.CSSProperties =
-    align === 'left'
+  const horizontal = side
+    ? ''
+    : align === 'left'
+      ? 'left-0'
+      : align === 'right'
+        ? 'right-0'
+        : 'left-1/2 -translate-x-1/2';
+  const placement = side ? '' : bottom === undefined ? 'bottom-full mb-3' : '';
+  const outerStyle: React.CSSProperties | undefined = side
+    ? { top: 0, maxWidth: side.maxWidth, [side.dir === 'right' ? 'left' : 'right']: side.inset }
+    : bottom === undefined
+      ? undefined
+      : { bottom };
+  const tailClass = side
+    ? side.dir === 'right'
+      ? 'top-4 -left-[9px] border-b-2 border-l-2'
+      : 'top-4 -right-[9px] border-t-2 border-r-2'
+    : '-bottom-[9px] border-b-2 border-r-2';
+  const tailStyle: React.CSSProperties = side
+    ? {}
+    : align === 'left'
       ? { left: tailOffset - 7 }
       : align === 'right'
         ? { right: tailOffset - 7 }
@@ -637,8 +912,8 @@ function ChatBubble({
   return (
     <span
       aria-hidden="true"
-      className={`mini-bubble pointer-events-none absolute ${bottom === undefined ? 'bottom-full mb-3' : ''} ${horizontal} block w-max max-w-[220px] text-left`}
-      style={bottom === undefined ? undefined : { bottom }}
+      className={`mini-bubble pointer-events-none absolute ${placement} ${horizontal} block w-max max-w-[220px] text-left`}
+      style={outerStyle}
     >
       <span
         className="relative block rounded-2xl border-2 bg-white px-3 pb-2 pt-1.5"
@@ -652,7 +927,7 @@ function ChatBubble({
           {text}
         </span>
         <span
-          className="absolute -bottom-[9px] block h-3.5 w-3.5 rotate-45 border-b-2 border-r-2 bg-white"
+          className={`absolute ${tailClass} block h-3.5 w-3.5 rotate-45 bg-white`}
           style={{ ...tailStyle, borderColor: accent }}
         />
       </span>
@@ -821,22 +1096,32 @@ function MiniSprite({ expression, pose, facing, nervous }: MiniSpriteProps) {
   );
 }
 
-function Sneaker({ cx }: { readonly cx: number }) {
+function Sneaker({ cx, shoe = SHOE, sole = SOLE }: { readonly cx: number; readonly shoe?: string; readonly sole?: string }) {
   return (
     <>
       <path
         d={`M${cx - 6} 88.6 Q${cx - 6.4} 84 ${cx - 1.5} 84 Q${cx + 4} 84 ${cx + 6.4} 87.6 L${cx + 6.4} 88.6 Z`}
-        fill={SHOE}
+        fill={shoe}
         stroke={INK}
         strokeWidth="0.7"
       />
-      <rect x={cx - 6.4} y="88.2" width="13.2" height="2.2" rx="1.1" fill={SOLE} stroke={INK} strokeWidth="0.5" />
-      <path d={`M${cx - 3} 86.6 L${cx + 3} 86`} stroke={SOLE} strokeWidth="0.7" strokeLinecap="round" />
+      <rect x={cx - 6.4} y="88.2" width="13.2" height="2.2" rx="1.1" fill={sole} stroke={INK} strokeWidth="0.5" />
+      <path d={`M${cx - 3} 86.6 L${cx + 3} 86`} stroke={sole} strokeWidth="0.7" strokeLinecap="round" />
     </>
   );
 }
 
-function StandingLegs({ pose }: { readonly pose: MiniPose }) {
+function StandingLegs({
+  pose,
+  pants = PANTS,
+  shoe = SHOE,
+  sole = SOLE,
+}: {
+  readonly pose: MiniPose;
+  readonly pants?: string;
+  readonly shoe?: string;
+  readonly sole?: string;
+}) {
   const kicking = pose === 'dangle';
   const walking = pose === 'walk';
   const legA = kicking ? 'animate-mini-kick-a' : walking ? 'animate-mini-walk-leg-a' : undefined;
@@ -847,12 +1132,12 @@ function StandingLegs({ pose }: { readonly pose: MiniPose }) {
   return (
     <>
       <g className={legA}>
-        <rect x={leftX} y="72" width="8" height="13.5" rx="3" fill={PANTS} stroke={INK} strokeWidth="0.8" />
-        <Sneaker cx={leftX + 5} />
+        <rect x={leftX} y="72" width="8" height="13.5" rx="3" fill={pants} stroke={INK} strokeWidth="0.8" />
+        <Sneaker cx={leftX + 5} shoe={shoe} sole={sole} />
       </g>
       <g className={legB}>
-        <rect x={rightX} y="72" width="8" height="13.5" rx="3" fill={PANTS} stroke={INK} strokeWidth="0.8" />
-        <Sneaker cx={rightX + 5} />
+        <rect x={rightX} y="72" width="8" height="13.5" rx="3" fill={pants} stroke={INK} strokeWidth="0.8" />
+        <Sneaker cx={rightX + 5} shoe={shoe} sole={sole} />
       </g>
     </>
   );
@@ -1445,12 +1730,15 @@ function BistroTableScene({
   viewport,
   guestName,
   guestBubble,
+  guestSeated,
   foodGone,
   jolt,
 }: {
   readonly viewport: CompanionViewport;
   readonly guestName: string;
   readonly guestBubble: string | null;
+  /** False while she's been picked up off her chair (she's drawn by her drag handle instead). */
+  readonly guestSeated: boolean;
   /** True right after the cheer cat ate everything (easter egg). */
   readonly foodGone: boolean;
   /** True for a moment when the cat crash-lands behind the table. */
@@ -1494,9 +1782,11 @@ function BistroTableScene({
         <Chair x0={8} x1={58} backX={8} />
         <Chair x0={w - 58} x1={w - 8} backX={w - 12} />
 
-        <g transform={`translate(${w + 4} ${SCENE_HEIGHT - SPRITE_H}) scale(-1 1)`}>
-          <GuestSprite />
-        </g>
+        {guestSeated && (
+          <g transform={`translate(${w + 4} ${SCENE_HEIGHT - SPRITE_H}) scale(-1 1)`}>
+            <GuestSprite />
+          </g>
+        )}
 
         <rect x={tableMid - 3} y={TABLE_TOP + 5} width="6" height={SCENE_HEIGHT - TABLE_TOP - 9} fill="#6b4226" stroke={INK} strokeWidth="0.6" />
         <ellipse cx={tableMid} cy={SCENE_HEIGHT - 4} rx="15" ry="3" fill="#6b4226" stroke={INK} strokeWidth="0.6" />
@@ -1605,12 +1895,63 @@ const G_HAIR = '#4b2a20';
 const G_HAIR_SHINE = '#8a5a44';
 const G_CARDIGAN = '#f7e8d8';
 
-function GuestSprite() {
-  return (
-    <g>
-      <SeatedLegs pants="#6a7fb0" shoe="#f1f5f9" sole="#cbd5e1" />
+const G_JEANS = '#6a7fb0';
+const G_SHOE = '#f1f5f9';
+const G_SOLE = '#cbd5e1';
 
-      <g transform="translate(0 3)">
+function GuestArms({ pose }: { readonly pose: MiniPose }) {
+  const colors = { sleeve: G_CARDIGAN, skin: G_SKIN };
+  switch (pose) {
+    case 'dangle':
+      return (
+        <>
+          <g className="animate-mini-flail-left">
+            <Limb shoulder={[24, 56]} elbow={[17, 50]} hand={[14, 42]} {...colors} />
+          </g>
+          <g className="animate-mini-flail-right">
+            <Limb shoulder={[52, 56]} elbow={[59, 50]} hand={[62, 42]} {...colors} />
+          </g>
+        </>
+      );
+    case 'fall':
+      return (
+        <>
+          <Limb shoulder={[24, 56]} elbow={[18, 48]} hand={[16, 40]} {...colors} />
+          <Limb shoulder={[52, 56]} elbow={[58, 48]} hand={[60, 40]} {...colors} />
+        </>
+      );
+    case 'seated':
+      return (
+        <>
+          <Limb shoulder={[25, 57]} elbow={[29, 65]} hand={[37, 67]} {...colors} />
+          <g className="animate-guest-wave-soft">
+            <Limb shoulder={[51, 57]} elbow={[56, 63]} hand={[62, 56]} {...colors} />
+          </g>
+        </>
+      );
+    default:
+      return (
+        <>
+          <Limb shoulder={[24, 56]} elbow={[20, 63]} hand={[19, 71]} {...colors} />
+          <Limb shoulder={[52, 56]} elbow={[56, 63]} hand={[57, 71]} {...colors} />
+        </>
+      );
+  }
+}
+
+/** Seated at the table by default; standing poses are used while she's picked up or walking back. */
+function GuestSprite({ pose = 'seated' }: { readonly pose?: MiniPose }) {
+  const seated = pose === 'seated';
+  const startled = pose === 'dangle' || pose === 'fall';
+  return (
+    <g className={pose === 'walk' ? 'animate-mini-bob' : undefined}>
+      {seated ? (
+        <SeatedLegs pants={G_JEANS} shoe={G_SHOE} sole={G_SOLE} />
+      ) : (
+        <StandingLegs pose={pose} pants={G_JEANS} shoe={G_SHOE} sole={G_SOLE} />
+      )}
+
+      <g transform={seated ? 'translate(0 3)' : undefined}>
         {/* Long back hair */}
         <path
           d="M13 30 C11 12 24 3 38 3 C52 3 65 12 63 30 C64 42 63 53 59 60 Q38 64 17 60 C13 53 12 42 13 30 Z"
@@ -1631,10 +1972,7 @@ function GuestSprite() {
         <circle cx="38" cy="60.5" r="0.8" fill="#c08457" />
         <circle cx="38" cy="65" r="0.8" fill="#c08457" />
 
-        <Limb shoulder={[25, 57]} elbow={[29, 65]} hand={[37, 67]} sleeve={G_CARDIGAN} skin={G_SKIN} />
-        <g className="animate-guest-wave-soft">
-          <Limb shoulder={[51, 57]} elbow={[56, 63]} hand={[62, 56]} sleeve={G_CARDIGAN} skin={G_SKIN} />
-        </g>
+        <GuestArms pose={pose} />
 
         {/* Face */}
         <path d={GUEST_FACE} fill={G_SKIN} stroke={INK} strokeWidth="1" strokeLinejoin="round" />
@@ -1686,8 +2024,17 @@ function GuestSprite() {
 
         <path d="M38.8 37.4 L38.3 38.6" stroke={G_SHADE} strokeWidth="0.9" strokeLinecap="round" />
         <Blush left={24} right={52} y={39.2} />
-        <path d="M35.4 41 Q38.6 45.2 41.8 41 Q38.6 42 35.4 41 Z" fill="#a0413a" stroke={INK} strokeWidth="0.8" strokeLinejoin="round" />
-        <ellipse cx="38.6" cy="43" rx="1.3" ry="0.7" fill="#f9a8d4" />
+        {startled ? (
+          <>
+            <ellipse cx="38.6" cy="42.6" rx="2" ry="2.6" fill="#a0413a" stroke={INK} strokeWidth="0.7" />
+            <ellipse cx="38.6" cy="44.1" rx="1.2" ry="0.7" fill="#f9a8d4" />
+          </>
+        ) : (
+          <>
+            <path d="M35.4 41 Q38.6 45.2 41.8 41 Q38.6 42 35.4 41 Z" fill="#a0413a" stroke={INK} strokeWidth="0.8" strokeLinejoin="round" />
+            <ellipse cx="38.6" cy="43" rx="1.3" ry="0.7" fill="#f9a8d4" />
+          </>
+        )}
       </g>
     </g>
   );

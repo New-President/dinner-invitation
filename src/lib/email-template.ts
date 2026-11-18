@@ -4,6 +4,15 @@ import type { InviteSubmission } from './validation';
 
 export const RECIPIENT_EMAIL = 'zirenyong2004@gmail.com';
 
+/** Shown to the host in place of the comment when the guest left it blank. */
+export const NO_COMMENT_TEXT = '(No message left, just the dinner pick)';
+
+/** The guest's comment as the host should read it, or a plain note that there wasn't one. */
+export function commentForHost(comment: string): string {
+  const trimmed = comment.trim();
+  return trimmed.length > 0 ? trimmed : NO_COMMENT_TEXT;
+}
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, '&amp;')
@@ -25,6 +34,7 @@ export function buildInvitationEmailContent(
     guestName: submission.guestName,
   });
 
+  const hasComment = submission.comment.trim().length > 0;
   const subject = `🎉 Dinner Confirmed: ${restaurant.name} (${regionMeta.name}) — Vegetarian Dinner Invite`;
 
   const text = [
@@ -42,7 +52,7 @@ export function buildInvitationEmailContent(
     `Add to Google Calendar: ${googleCalendarUrl}`,
     ``,
     `Comments / Special Requests:`,
-    `"${submission.comment}"`,
+    hasComment ? `"${submission.comment}"` : NO_COMMENT_TEXT,
     ``,
     `Submitted at: ${timestampSGT} (Singapore Time)`,
   ].join('\n');
@@ -95,7 +105,11 @@ export function buildInvitationEmailContent(
         <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#be123c;letter-spacing:1px;margin-bottom:6px;">
           Message &amp; Comments for Yong Zi Ren
         </div>
-        <p style="margin:0;font-size:16px;line-height:1.6;color:#4c0519;white-space:pre-wrap;">“${escapeHtml(submission.comment)}”</p>
+        ${
+          hasComment
+            ? `<p style="margin:0;font-size:16px;line-height:1.6;color:#4c0519;white-space:pre-wrap;">“${escapeHtml(submission.comment)}”</p>`
+            : `<p style="margin:0;font-size:14px;line-height:1.6;color:#9f1239;font-style:italic;">${escapeHtml(NO_COMMENT_TEXT)}</p>`
+        }
       </div>
 
       <table style="width:100%;border-collapse:collapse;font-size:14px;color:#4a2535;">

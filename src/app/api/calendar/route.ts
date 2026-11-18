@@ -1,11 +1,12 @@
-import { RESTAURANTS, findRestaurantById } from '@/lib/restaurants';
+import { findRestaurantById } from '@/lib/restaurants';
 import { serializeDinnerCalendarIcs } from '@/lib/calendar';
+import { loadCatalog } from '@/lib/catalog-store';
 
 export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url);
+  const catalog = await loadCatalog();
   const restaurant =
-    findRestaurantById(searchParams.get('restaurantId') ?? '') ??
-    RESTAURANTS[0];
+    findRestaurantById(catalog, searchParams.get('restaurantId') ?? '') ?? catalog[0];
 
   const comment = (searchParams.get('comment') ?? '').trim().slice(0, 2000);
   const rawGuestName = (searchParams.get('guestName') ?? '')

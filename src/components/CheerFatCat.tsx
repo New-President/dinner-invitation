@@ -117,6 +117,8 @@ export function CheerFatCat({ restaurantName }: CheerFatCatProps) {
   const [egg, setEgg] = useState<EasterEggPhase>('idle');
   const [leap, setLeap] = useState<LeapPlan | null>(null);
   const [impact, setImpact] = useState<boolean>(false);
+  /** The tap hint goes away for good once the surprise has been found. */
+  const [hintDismissed, setHintDismissed] = useState<boolean>(false);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const flyerRef = useRef<HTMLDivElement | null>(null);
@@ -146,6 +148,7 @@ export function CheerFatCat({ restaurantName }: CheerFatCatProps) {
 
   const startEasterEgg = () => {
     if (egg !== 'idle' || !svgRef.current) return;
+    setHintDismissed(true);
     setLeap(planLeap(svgRef.current));
     setEgg('leaping');
   };
@@ -230,7 +233,7 @@ export function CheerFatCat({ restaurantName }: CheerFatCatProps) {
   return (
     <div
       id="cute-cat-section"
-      className="flex flex-col items-center justify-between gap-3 rounded-3xl bg-gradient-to-b from-[#2e1d36] via-[#24162b] to-[#1a1120] border-2 border-amber-400/45 p-4 sm:p-7 text-center relative overflow-hidden shadow-[0_0_50px_rgba(251,191,36,0.15)]"
+      className="flex flex-col items-center justify-between gap-3 rounded-3xl bg-gradient-to-b from-[var(--cat-from)] via-[var(--cat-via)] to-[var(--cat-to)] border-2 border-amber-400/45 p-4 sm:p-7 text-center relative overflow-hidden shadow-[0_0_50px_rgba(251,191,36,0.15)]"
     >
       {/* Speech bubble */}
       <div
@@ -245,7 +248,7 @@ export function CheerFatCat({ restaurantName }: CheerFatCatProps) {
         type="button"
         onClick={startEasterEgg}
         aria-disabled={egg !== 'idle'}
-        aria-label="Tap the cheering cat"
+        aria-label="Tap the cheering cat for a surprise"
         className={`relative flex-1 flex items-center justify-center w-full rounded-3xl bg-transparent border-0 p-0 focus-visible:outline-3 focus-visible:outline-amber-300 focus-visible:outline-offset-4 ${
           egg === 'idle' ? 'cursor-pointer' : 'cursor-default'
         }`}
@@ -303,6 +306,17 @@ export function CheerFatCat({ restaurantName }: CheerFatCatProps) {
             <CatFigure action={action} beat={beat} mode="cheer" />
           </g>
         </svg>
+
+        {/* Tap hint pinned to the cat itself, well above the companion stage at the
+            bottom of the screen, so the speech bubbles there can't cover it. */}
+        {egg === 'idle' && !hintDismissed && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-1 right-1 sm:bottom-3 sm:right-3 inline-flex items-center gap-1 rounded-full border-2 border-white bg-amber-300 px-2.5 py-1 text-[11px] sm:text-xs font-black text-[#231728] shadow-[0_6px_16px_rgba(0,0,0,0.45)] motion-safe:animate-pulse"
+          >
+            👆 Tap me!
+          </span>
+        )}
       </button>
 
       {/* The cat on its snack run, drawn above the page */}
@@ -375,7 +389,6 @@ export function CheerFatCat({ restaurantName }: CheerFatCatProps) {
         <p className="text-xs sm:text-sm text-rose-100/90 leading-relaxed">
           Go score super well in your exam! A delicious dinner at{' '}
           <strong className="text-amber-200">{restaurantName}</strong> will be waiting to celebrate right after!
-          <span className="block mt-1 text-[11px] text-rose-200/70">Psst… try tapping the cat 👀</span>
         </p>
       </div>
     </div>

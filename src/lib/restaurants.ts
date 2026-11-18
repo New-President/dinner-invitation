@@ -34,7 +34,10 @@ export interface Restaurant {
   readonly region: RegionId;
   readonly name: string;
   readonly chineseName?: string;
+  /** Shown as the gold "Zi Ren Wants To Try" pick: first on mobile, middle on desktop. */
   readonly hostWantsToTry?: boolean;
+  /** Google Places ID, set when the restaurant was added from a Google Maps link. */
+  readonly googlePlaceId?: string;
   readonly areaName: string;
   readonly googleCategory: string;
   readonly openStatusText: string;
@@ -54,9 +57,10 @@ export interface Restaurant {
   readonly mapEmbedUrl: string;
   readonly description: string;
   readonly vibe: string;
-  readonly highlights: readonly [string, ...string[]];
-  readonly reviews: readonly [RestaurantReview, ...RestaurantReview[]];
-  readonly photos: readonly [RestaurantPhoto, ...RestaurantPhoto[]];
+  readonly highlights: readonly string[];
+  /** Real diner quotes only; may be empty when no verified quotes are available. */
+  readonly reviews: readonly RestaurantReview[];
+  readonly photos: readonly RestaurantPhoto[];
 }
 
 export const REGION_ORDER: readonly RegionId[] = [
@@ -98,7 +102,7 @@ export const REGIONS: Readonly<Record<RegionId, RegionMeta>> = {
   north: {
     id: 'north',
     name: 'North Woodlands & Yishun',
-    subtitle: 'Yishun Pond · Northpoint · Sembawang',
+    subtitle: 'Yishun Pond · Woodlands · Sembawang',
     tagline: 'Lakeside lookout dining, comforting herbal broths, and Sembawang zi char classics.',
     mapCoordinates: { x: 430, y: 125 },
     badgeColor: '#8b5cf6',
@@ -115,7 +119,7 @@ export const REGIONS: Readonly<Record<RegionId, RegionMeta>> = {
   },
 };
 
-function createGoogleMapEmbed(
+export function createGoogleMapEmbed(
   placeQuery: string,
   coordinates: { readonly lat: number; readonly lng: number }
 ): string {
@@ -123,12 +127,16 @@ function createGoogleMapEmbed(
   return `https://www.google.com/maps?q=${encodeURIComponent(cleanQuery)}&ll=${coordinates.lat},${coordinates.lng}&z=16&hl=en&output=embed`;
 }
 
-function createGoogleMapDirections(name: string, address: string): string {
+export function createGoogleMapDirections(name: string, address: string): string {
   const cleanAddress = address.replace(/#[0-9A-Za-z/-]+\s*,?\s*/g, '');
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${name}, ${cleanAddress}`)}`;
 }
 
-export const RESTAURANTS: readonly Restaurant[] = [
+/**
+ * The original catalog. The live site uses whatever the admin page last saved
+ * (see catalog-store.ts) and falls back to this list until something is saved.
+ */
+export const SEED_RESTAURANTS: readonly Restaurant[] = [
   // ======================== WEST ========================
   {
     id: asRestaurantId('dlife-bistro-cafe'),
@@ -836,73 +844,64 @@ export const RESTAURANTS: readonly Restaurant[] = [
     ],
   },
   {
-    id: asRestaurantId('greendot-plus-northpoint'),
+    // Details from the branch's Spinach Guide listing (data refreshed 18 Nov 2026),
+    // which mirrors its Google Maps place: rating, hours, phone, pin and photos.
+    id: asRestaurantId('shu-vegetarian-woodlands'),
     region: 'north',
-    name: 'Greendot Northpoint',
-    chineseName: '绿一点',
-    areaName: 'Northpoint City · Yishun',
+    name: 'SHU Vegetarian Woodlands',
+    chineseName: '蔬方斋',
+    areaName: 'Woodlands Ave 1 · Woodlands',
     googleCategory: 'Vegetarian restaurant',
-    openStatusText: 'Opens 11 am',
-    popularTimesPeak: 'Peak 6 pm – 8 pm',
-    coordinates: { lat: 1.4292353, lng: 103.8361403 },
-    cuisine: 'Taiwanese-Asian Herbal Soup & Bento',
-    rating: 4.3,
-    reviewCount: 844,
-    priceRange: '$12–22',
-    address: '930 Yishun Ave 2, #B2-09/11 Northpoint City, Singapore 769098',
-    postalCode: '769098',
-    hours: 'Daily 11:00 am – 9:30 pm',
-    serviceTag: 'Serves vegan & allium-free dishes · Nourishing bowls',
-    phone: '+65 6754 1778',
-    websiteUrl: 'https://www.greendot.sg',
+    openStatusText: 'Opens 10:30 am',
+    popularTimesPeak: 'Busiest at weekday lunch (~20 min wait)',
+    coordinates: { lat: 1.432739, lng: 103.785173 },
+    cuisine: 'Chinese Vegetarian Zi Char & Mala',
+    rating: 3.7,
+    reviewCount: 83,
+    priceRange: 'From ~$6',
+    address: 'Blk 354A Woodlands Ave 1, #01-01, Singapore 730354',
+    postalCode: '730354',
+    hours: 'Daily 10:30 am – 9:00 pm',
+    serviceTag: 'Some vegan dishes, clearly marked · Coffee-shop zi char',
+    phone: '+65 8771 8829',
+    websiteUrl: 'https://shuvegetarian.oddle.me/en_SG',
     directionsUrl: createGoogleMapDirections(
-      'Greendot Northpoint',
-      '930 Yishun Ave 2, Northpoint City, Singapore 769098'
+      'SHU Vegetarian Woodlands',
+      '354A Woodlands Ave 1, Singapore 730354'
     ),
     mapEmbedUrl: createGoogleMapEmbed(
-      'Greendot Northpoint, 930 Yishun Ave 2, Northpoint City, Singapore 769098',
-      { lat: 1.4292353, lng: 103.8361403 }
+      'SHU Vegetarian 蔬方斋, 354A Woodlands Ave 1, Singapore 730354',
+      { lat: 1.432739, lng: 103.785173 }
     ),
     description:
-      'Wholesome Taiwanese-inspired meat-free dining at Northpoint City serving warming Angelica Herbal Noodles, Rendang Lion Mane Bento sets, and signature Laksa.',
-    vibe: 'Bright, leafy modern Asian kitchen',
+      'No-frills coffee-shop outlet of the SHU Vegetarian chain, tucked under a multi-storey HDB carpark on Woodlands Ave 1. Serves vegetarian Chinese stir-fries and zi char such as yam ring, bee hoon and nasi lemak at very affordable prices.',
+    vibe: 'Casual heartland coffee shop in the North',
     highlights: [
-      'Signature Rendang Lion Mane Mushroom Bento with Purple Rice',
-      'Double-Boiled Angelica Root Herbal Konjac Mee Sua',
-      'Nyonya Laksa with Crispy Beancurd Skin & Tau Pok',
-      'Crispy Soy Nuggets with Taiwanese Plum Powder',
+      'Mala Xiang Guo (dry mala stir-fry)',
+      'Thai-Style "Chicken" Pieces Rice (about $6)',
+      'Yam Ring',
+      'Vegetarian Nasi Lemak',
     ],
-    reviews: [
-      {
-        author: 'Brahmakumar B.',
-        rating: 5,
-        text: 'Friendly service and very healthy food! Their Rendang Lion Mane Mushroom bento with five-grain rice is my ultimate comfort meal.',
-        timeAgo: '4 days ago',
-      },
-      {
-        author: 'Gabriel L.',
-        rating: 4,
-        text: 'Conveniently located inside Northpoint City. Love the herbal soup and laksa—never feels heavy.',
-        timeAgo: '2 weeks ago',
-      },
-    ],
+    // No review quotes in the source listing; none are invented here.
+    reviews: [],
     photos: [
+      // Photo links copied from Google by the host.
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLdDPkZyvS3IeoWobYFEaiojLsluDYKBlNRFGK9LydhthMdWAcet396dgsR6XvL8ixlpdWCRRVEnfZBuOkNuW2Ph6UsUl7bYvAX8jI2ye_x4R4dvFkYmwnk0QNfsYuLR9mbtMwm8=w720-h540-k-no',
-        caption: 'Rendang Lion Mane Grain Bento',
-        rating: '4.3 ★ (844)',
+        url: 'https://lh3.googleusercontent.com/gps-cs-s/ANWiy9RpZJyP9vdjyx1tGPxCt9kblZJS_IYzwpdKGaK9pnz_BKthYfHK2coDhjxLJWW1t1Ejd48sE1bFPFWLGRCT2DutUZJh9yW9d6nJDk8hpjY1EYqI_iXzCSCuzSqcoJm9sY4zZeiJ80iPYMuA=s680-w680-h510-rw',
+        caption: 'SHU Vegetarian Woodlands',
+        rating: '3.7 ★ (83)',
       },
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLd7fmJybJuBTY_mV8Eg9e6JWIBKrRFmjNaMd-KCZXsYv-hb8d_bWcOqGzhfzldjtBJvEY2HTZ590n7DNV345HXUX9qG1mYLKRObxHZ6Jp8HCClfKlDF0xNSRMDotj917R1diNMCZQ=w720-h540-k-no',
-        caption: 'Nourishing Angelica Herbal Soup & Laksa',
+        url: 'https://lh3.googleusercontent.com/gps-cs-s/ANWiy9RREDNxBmvRqydhspTdDjkD8hapJXcBHftAfir-14AF_q69SvVQJ6HFYkFAWl5x5DLikTEs431m43s48vm6J-U-LguLtNipfvussTS5_zZpAp7gRnW760Mr9Tbw-qJe6XErVQb2wpGAgSE=s680-w680-h510-rw',
+        caption: 'Diner photo · Google Maps',
       },
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLdm4TwncvoiA13RDTmFCl_VIcW774WQp53-RHyq4ahYPpdME1wPlFW8essYrRt6vpbRBE_wMpi8IQrZqQjhSmi_BtuIFYo93RoH54-iTD5-546sYZebtoSmklr3GeSAhmhtDO4-94_UQXU=w720-h540-k-no',
-        caption: 'Signature Bento Sets & Sides',
+        url: 'https://lh3.googleusercontent.com/gps-cs-s/ANWiy9ToR2PDXGgpjAEswbEt_fBy521KKRtbzdg_gPve1tc3jBb2CHZ0UZwxg4hOwLu_SK0gXL5_GHv-vbzf9r5oxcpQm4B-zpoGwrZHGkKaEpDtZN-iHwiyx6Misjc2K1IrXo7OYGqoeg=s680-w680-h510-rw',
+        caption: 'Diner photo · Google Maps',
       },
       {
-        url: 'https://lh3.googleusercontent.com/grass-cs/AABkmLfDtwoFd00eDJ6X_TWRMTc7WiHlvNRH8KZaRioxGDx9yWBAx8k7HWm2BAcrCtwTbvNojN0r_ZSdjHlZhBkHrF4mwoXNjQcrXiE9I7Vk0ewr-M2bgB3qQBc13NN7KyTGmpzlMB5fKCy2bvQ=w720-h540-k-no',
-        caption: 'Northpoint City Dining Space',
+        url: 'https://lh3.googleusercontent.com/proxy/Wdt93FawscJ8blelh40EqCLFYiuRQLnpnPos_ENaG9BwrdmvEIT7sVfVw_JkQnKRLTEfzx5GvN7z2ygTBSWsA_z3oq4QzF2RrVJ_0G_DmAVeisdvSSvL5KvcSVXFMPoXqCGVqf5cgGThK4tSiAGOo-xhR7ae4Q=s680-w680-h510-rw',
+        caption: 'Diner photo · Google Maps',
       },
     ],
   },
@@ -1202,12 +1201,38 @@ export function isValidRegionId(value: unknown): value is RegionId {
   );
 }
 
-export function getRestaurantsByRegion(region: RegionId): readonly Restaurant[] {
-  return RESTAURANTS.filter((restaurant) => restaurant.region === region);
+export function getRestaurantsByRegion(
+  catalog: readonly Restaurant[],
+  region: RegionId
+): readonly Restaurant[] {
+  return catalog.filter((restaurant) => restaurant.region === region);
 }
 
-export function findRestaurantById(id: string): Restaurant | undefined {
-  return RESTAURANTS.find((restaurant) => restaurant.id === id);
+export function findRestaurantById(
+  catalog: readonly Restaurant[],
+  id: string
+): Restaurant | undefined {
+  return catalog.find((restaurant) => restaurant.id === id);
+}
+
+const TIME_TOKEN = /^\d{1,2}(?::\d{2})?\s*(am|pm)$/i;
+
+/** True when an hours string uses the "Daily 11:00 am – 9:30 pm[, 5:00 pm – 10:00 pm]" format the cards understand. */
+export function isValidHoursString(hoursString: string): boolean {
+  if (!/^Daily\s+/i.test(hoursString.trim())) return false;
+  const segments = hoursString
+    .trim()
+    .replace(/^Daily\s+/i, '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return (
+    segments.length > 0 &&
+    segments.every((segment) => {
+      const parts = segment.split(/\s*[–-]\s*/);
+      return parts.length === 2 && parts.every((p) => TIME_TOKEN.test(p.trim()));
+    })
+  );
 }
 
 export interface LiveOpeningStatus {

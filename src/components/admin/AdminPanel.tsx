@@ -240,10 +240,14 @@ export function AdminPanel({ initialCatalog, store, placesReady }: AdminPanelPro
               type="button"
               onClick={save}
               disabled={!dirty || saving || !store.writable}
-              className="btn-primary inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap px-5 text-sm sm:flex-none disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+              className="btn-primary inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap px-3.5 text-xs leading-4 sm:flex-none sm:gap-2 sm:px-5 sm:text-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
-              {saving ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Save className="h-4 w-4 shrink-0" />}
-              {saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin sm:h-4 sm:w-4" />
+              ) : (
+                <Save className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+              )}
+              <span className="truncate">{saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</span>
             </button>
           </div>
         </div>
